@@ -304,6 +304,20 @@ function toggleMode() {
   renderImportZone();
 }
 
+
+// Génère le tag HTML d'une boutique (évite les conflits de guillemets)
+function makeBoutiqueTag(b) {
+  const span = document.createElement('span');
+  span.style.cssText = 'background:var(--bleu-pale);padding:2px 8px;border-radius:10px;font-size:0.75rem;display:inline-flex;align-items:center;gap:4px;';
+  span.innerHTML = b.nom + ' : CB ' + fmt(b.CB) + ' | Chq ' + fmt(b.Cheques) + ' | Esp ' + fmt(b.Especes);
+  const btn = document.createElement('button');
+  btn.textContent = '✕';
+  btn.style.cssText = 'background:none;border:none;color:#c00;cursor:pointer;font-size:0.75rem;margin-left:4px;';
+  btn.onclick = () => supprimerBoutique(b.nom);
+  span.appendChild(btn);
+  return span.outerHTML;
+}
+
 // ---- ZONE IMPORT / SAISIE ----
 function renderImportZone() {
   const moisIdx = moisActifVentes;
@@ -343,11 +357,7 @@ function renderImportZone() {
         '<strong>' + MOIS[moisIdx] + ' ' + anneeActive + ' - ' + boutiques.length + ' boutique(s) importée(s)</strong><br>' +
         '<span style="font-size:0.82rem;color:#555;">CB : ' + fmt(v.CB) + ' | Chèques : ' + fmt(v.Cheques) + ' | Espèces : ' + fmt(v.Especes) + '</span><br>' +
         '<div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">' +
-        boutiques.map(b =>
-          '<span style="background:var(--bleu-pale);padding:2px 8px;border-radius:10px;font-size:0.75rem;">' +
-          b.nom + ' : CB ' + fmt(b.CB) + ' | Chq ' + fmt(b.Cheques) + ' | Esp ' + fmt(b.Especes) +
-          ' <button onclick="supprimerBoutique('' + b.nom + '')" style="background:none;border:none;color:#c00;cursor:pointer;font-size:0.75rem;margin-left:4px;">✕</button></span>'
-        ).join('') +
+        boutiques.map(b => makeBoutiqueTag(b)).join('') +
         '</div></div>' +
         '<button onclick="effacerMois()" style="margin-left:8px;background:none;border:1px solid #c00;color:#c00;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.78rem;white-space:nowrap;">✕ Tout effacer</button>' +
         '</div>';
@@ -360,7 +370,7 @@ function renderImportZone() {
         '<div style="font-size:0.78rem;font-weight:bold;color:var(--anthracite);margin-bottom:6px;">' +
         (deja ? '✓ ' : '') + nom + (deja ? ' <span style="color:var(--vert-foret);font-weight:normal;">(importé)</span>' : '') + '</div>' +
         '<div class="import-zone" id="dz-' + nom + '" style="padding:16px;' + (deja ? 'border-color:var(--vert-foret);background:var(--vert-pale);' : '') + '">' +
-        '<input type="file" accept=".csv,.txt" onchange="lireCSVBoutique(this.files[0], '' + nom + '')">' +
+        '<input type="file" accept=".csv,.txt" data-boutique="' + nom + '" onchange="handleCSVInput(this)">' +
         '<div style="font-size:1.2rem;">' + (deja ? '✓' : '📂') + '</div>' +
         '<div style="font-size:0.78rem;color:#888;margin-top:4px;">' + (deja ? 'Remplacer' : 'Glisser CSV') + '</div>' +
         '</div></div>';
@@ -452,6 +462,10 @@ async function supprimerBoutique(nomBoutique) {
 }
 
 // Ancienne fonction gardée pour compatibilité
+function handleCSVInput(input) {
+  const nom = input.getAttribute('data-boutique');
+  if (input.files[0]) lireCSVBoutique(input.files[0], nom);
+}
 function lireCSV(file) { lireCSVBoutique(file, 'Tulle'); }
 
 function parserCSVHiboutik(text) {
