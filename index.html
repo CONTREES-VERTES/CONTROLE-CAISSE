@@ -5,391 +5,107 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Contrôle Caisse - Contrées Vertes</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DIN+Condensed:wght@400;700&display=swap');
-
-  :root {
-    --terracotta: #D88050;
-    --bleu-gris: #5D7E8E;
-    --vert-foret: #4B6239;
-    --brun: #9C755E;
-    --anthracite: #575756;
-    --creme: #FFFBD8;
-    --bleu-pale: #D5ECEF;
-    --vert-pale: #D0E3B9;
-    --rose: #FBD9DD;
-    --blanc: #ffffff;
-    --gris-clair: #f5f5f3;
-    --bordure: #ddd;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: Helvetica, Arial, sans-serif;
-    background: var(--gris-clair);
-    color: var(--anthracite);
-    min-height: 100vh;
-  }
-
-  /* HEADER */
-  header {
-    background: var(--anthracite);
-    color: var(--creme);
-    padding: 14px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  header .logo {
-    font-family: 'Cooper Black', Georgia, serif;
-    font-size: 1.2rem;
-    color: var(--terracotta);
-    letter-spacing: 0.5px;
-  }
-  header .subtitle {
-    font-size: 0.75rem;
-    color: #aaa;
-    margin-top: 2px;
-  }
-  header .year-badge {
-    background: var(--terracotta);
-    color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: bold;
-    cursor: pointer;
-  }
-
-  /* CONFIG PANEL */
-  #config-panel {
-    background: var(--bleu-pale);
-    border-bottom: 2px solid var(--bleu-gris);
-    padding: 12px 24px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-  #config-panel label { font-size: 0.8rem; color: var(--anthracite); font-weight: bold; }
-  #config-panel input {
-    padding: 5px 10px;
-    border: 1px solid var(--bleu-gris);
-    border-radius: 4px;
-    font-size: 0.85rem;
-    width: 180px;
-  }
-  #config-panel input[type="password"] { width: 140px; }
-  .btn-connect {
-    background: var(--bleu-gris);
-    color: white;
-    border: none;
-    padding: 6px 16px;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    cursor: pointer;
-    font-weight: bold;
-  }
-  .btn-connect:hover { background: #4a6a79; }
-  #connect-status {
-    font-size: 0.8rem;
-    padding: 4px 10px;
-    border-radius: 4px;
-  }
-  .status-ok { background: var(--vert-pale); color: var(--vert-foret); }
-  .status-err { background: var(--rose); color: #c00; }
-  .status-loading { background: var(--creme); color: var(--brun); }
-
-  /* ONGLETS */
-  nav.tabs {
-    background: var(--blanc);
-    border-bottom: 2px solid var(--bordure);
-    display: flex;
-    padding: 0 24px;
-  }
-  nav.tabs button {
-    background: none;
-    border: none;
-    padding: 12px 20px;
-    font-size: 0.9rem;
-    color: #888;
-    cursor: pointer;
-    border-bottom: 3px solid transparent;
-    margin-bottom: -2px;
-    font-family: Helvetica, Arial, sans-serif;
-    font-weight: bold;
-    transition: all 0.2s;
-  }
-  nav.tabs button.active {
-    color: var(--terracotta);
-    border-bottom-color: var(--terracotta);
-  }
-  nav.tabs button:hover { color: var(--terracotta); }
-
-  /* CONTENU */
-  main { padding: 24px; max-width: 1200px; margin: 0 auto; }
-
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
-
-  /* SECTION MOIS */
-  .month-selector {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
-  }
-  .month-btn {
-    padding: 6px 14px;
-    border: 1px solid var(--bordure);
-    border-radius: 4px;
-    background: white;
-    font-size: 0.8rem;
-    cursor: pointer;
-    color: var(--anthracite);
-    transition: all 0.15s;
-  }
-  .month-btn.active {
-    background: var(--terracotta);
-    color: white;
-    border-color: var(--terracotta);
-  }
-  .month-btn:hover:not(.active) { background: var(--creme); }
-
-  /* CARDS VENTES */
-  .cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-  .card {
-    background: white;
-    border-radius: 8px;
-    padding: 16px;
-    border-left: 4px solid var(--bordure);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-  }
-  .card.cb { border-left-color: var(--bleu-gris); }
-  .card.cheque { border-left-color: var(--vert-foret); }
-  .card.especes { border-left-color: var(--terracotta); }
-  .card.total { border-left-color: var(--anthracite); background: var(--creme); }
-  .card-label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-  .card-value { font-size: 1.6rem; font-weight: bold; color: var(--anthracite); }
-  .card-sub { font-size: 0.75rem; color: #aaa; margin-top: 4px; }
-
-  /* TABLEAU */
-  .table-wrap { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 20px; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-  thead th {
-    background: var(--anthracite);
-    color: white;
-    padding: 10px 14px;
-    text-align: left;
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  tbody tr:nth-child(even) { background: var(--gris-clair); }
-  tbody tr:hover { background: var(--bleu-pale); }
-  tbody td { padding: 9px 14px; border-bottom: 1px solid #eee; }
-  td.num { text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
-  td.mode-cb { color: var(--bleu-gris); font-weight: bold; }
-  td.mode-cheque { color: var(--vert-foret); font-weight: bold; }
-  td.mode-especes { color: var(--terracotta); font-weight: bold; }
-
-  /* ÉCARTS */
-  .ecart-ok { color: var(--vert-foret); font-weight: bold; }
-  .ecart-warn { color: var(--terracotta); font-weight: bold; }
-  .ecart-err { color: #c00; font-weight: bold; }
-  .badge-ok { background: var(--vert-pale); color: var(--vert-foret); padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; }
-  .badge-warn { background: var(--creme); color: var(--brun); padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; }
-  .badge-err { background: var(--rose); color: #c00; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; }
-
-  /* FORMULAIRE REMISE */
-  .form-remise {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .form-remise h3 {
-    font-family: 'Cooper Black', Georgia, serif;
-    color: var(--terracotta);
-    font-size: 1rem;
-    margin-bottom: 16px;
-  }
-  .form-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
-  .form-group { display: flex; flex-direction: column; gap: 4px; }
-  .form-group label { font-size: 0.78rem; color: #666; font-weight: bold; }
-  .form-group input, .form-group select {
-    padding: 7px 10px;
-    border: 1px solid var(--bordure);
-    border-radius: 4px;
-    font-size: 0.88rem;
-    font-family: Helvetica, Arial, sans-serif;
-  }
-  .form-group input:focus, .form-group select:focus {
-    outline: none;
-    border-color: var(--bleu-gris);
-    box-shadow: 0 0 0 2px rgba(93,126,142,0.15);
-  }
-  .form-group.wide input { width: 280px; }
-  .btn-add {
-    background: var(--vert-foret);
-    color: white;
-    border: none;
-    padding: 8px 18px;
-    border-radius: 4px;
-    font-size: 0.88rem;
-    cursor: pointer;
-    font-weight: bold;
-    height: 34px;
-  }
-  .btn-add:hover { background: #3a4f2c; }
-  .btn-del {
-    background: none;
-    border: none;
-    color: #c00;
-    cursor: pointer;
-    font-size: 1rem;
-    padding: 0 4px;
-  }
-  .btn-del:hover { color: #900; }
-
-  /* CHARGEMENT */
-  .loading {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 20px;
-    color: #888;
-    font-size: 0.88rem;
-  }
-  .spinner {
-    width: 18px; height: 18px;
-    border: 2px solid #ddd;
-    border-top-color: var(--terracotta);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .empty-state {
-    padding: 40px;
-    text-align: center;
-    color: #aaa;
-    font-size: 0.88rem;
-  }
-  .empty-state strong { display: block; font-size: 1.1rem; margin-bottom: 8px; color: #ccc; }
-
-  /* SYNTHESE */
-  .synth-row-ok td { background: rgba(208, 227, 185, 0.2); }
-  .synth-row-warn td { background: rgba(251, 217, 221, 0.2); }
-
-  /* BOUTON EXPORT */
-  .btn-export {
-    background: var(--bleu-gris);
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    font-size: 0.82rem;
-    cursor: pointer;
-    font-weight: bold;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .btn-export:hover { background: #4a6a79; }
-
-  .section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-  }
-  .section-title {
-    font-family: 'Cooper Black', Georgia, serif;
-    color: var(--anthracite);
-    font-size: 1.1rem;
-  }
-  .section-title span { color: var(--terracotta); }
-
-  /* EXPLICATIONS */
-  .explication-input {
-    border: 1px dashed var(--bordure);
-    background: transparent;
-    font-size: 0.8rem;
-    padding: 3px 6px;
-    border-radius: 3px;
-    width: 180px;
-    color: var(--anthracite);
-    font-family: Helvetica, Arial, sans-serif;
-  }
-  .explication-input:focus {
-    outline: none;
-    border-color: var(--bleu-gris);
-    background: white;
-  }
-
-  /* ANNEE SELECTOR */
-  .annee-select {
-    padding: 4px 10px;
-    border: 1px solid var(--bordure);
-    border-radius: 4px;
-    font-size: 0.85rem;
-    background: white;
-  }
-
-  /* FOOTER */
-  footer {
-    text-align: center;
-    padding: 16px;
-    font-size: 0.75rem;
-    color: #aaa;
-    margin-top: 40px;
-  }
-  footer span { color: var(--terracotta); }
+:root {
+  --terracotta:#D88050; --bleu-gris:#5D7E8E; --vert-foret:#4B6239;
+  --brun:#9C755E; --anthracite:#575756; --creme:#FFFBD8;
+  --bleu-pale:#D5ECEF; --vert-pale:#D0E3B9; --rose:#FBD9DD;
+  --blanc:#ffffff; --gris-clair:#f5f5f3; --bordure:#ddd;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Helvetica,Arial,sans-serif;background:var(--gris-clair);color:var(--anthracite);min-height:100vh;}
+header{background:var(--anthracite);color:var(--creme);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;}
+header .logo{font-family:'Cooper Black',Georgia,serif;font-size:1.2rem;color:var(--terracotta);}
+header .subtitle{font-size:0.75rem;color:#aaa;margin-top:2px;}
+select.annee-select{padding:4px 10px;border:1px solid var(--bordure);border-radius:4px;font-size:0.85rem;background:white;}
+#config-panel{background:var(--bleu-pale);border-bottom:2px solid var(--bleu-gris);padding:12px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+#config-panel label{font-size:0.8rem;font-weight:bold;}
+#config-panel input{padding:5px 10px;border:1px solid var(--bleu-gris);border-radius:4px;font-size:0.85rem;}
+.btn-connect{background:var(--bleu-gris);color:white;border:none;padding:6px 16px;border-radius:4px;font-size:0.85rem;cursor:pointer;font-weight:bold;}
+.btn-connect:hover{background:#4a6a79;}
+#connect-status{font-size:0.8rem;padding:4px 10px;border-radius:4px;display:none;}
+.status-ok{background:var(--vert-pale);color:var(--vert-foret);}
+.status-err{background:var(--rose);color:#c00;}
+.status-loading{background:var(--creme);color:var(--brun);}
+nav.tabs{background:var(--blanc);border-bottom:2px solid var(--bordure);display:flex;padding:0 24px;}
+nav.tabs button{background:none;border:none;padding:12px 20px;font-size:0.9rem;color:#888;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;font-family:Helvetica,Arial,sans-serif;font-weight:bold;}
+nav.tabs button.active{color:var(--terracotta);border-bottom-color:var(--terracotta);}
+main{padding:24px;max-width:1200px;margin:0 auto;}
+.tab-panel{display:none;} .tab-panel.active{display:block;}
+.month-selector{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+.month-btn{padding:6px 14px;border:1px solid var(--bordure);border-radius:4px;background:white;font-size:0.8rem;cursor:pointer;}
+.month-btn.active{background:var(--terracotta);color:white;border-color:var(--terracotta);}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px;}
+.card{background:white;border-radius:8px;padding:16px;border-left:4px solid var(--bordure);box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.card.cb{border-left-color:var(--bleu-gris);} .card.cheque{border-left-color:var(--vert-foret);} .card.especes{border-left-color:var(--terracotta);} .card.total{border-left-color:var(--anthracite);background:var(--creme);}
+.card-label{font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;}
+.card-value{font-size:1.6rem;font-weight:bold;color:var(--anthracite);}
+.card-sub{font-size:0.75rem;color:#aaa;margin-top:4px;}
+.table-wrap{background:white;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06);margin-bottom:20px;}
+table{width:100%;border-collapse:collapse;font-size:0.88rem;}
+thead th{background:var(--anthracite);color:white;padding:10px 14px;text-align:left;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;}
+tbody tr:nth-child(even){background:var(--gris-clair);}
+tbody tr:hover{background:var(--bleu-pale);}
+tbody td{padding:9px 14px;border-bottom:1px solid #eee;}
+td.num{text-align:right;font-weight:500;}
+td.mode-cb{color:var(--bleu-gris);font-weight:bold;} td.mode-cheque{color:var(--vert-foret);font-weight:bold;} td.mode-especes{color:var(--terracotta);font-weight:bold;}
+.ecart-ok{color:var(--vert-foret);font-weight:bold;} .ecart-warn{color:var(--terracotta);font-weight:bold;} .ecart-err{color:#c00;font-weight:bold;}
+.badge-ok{background:var(--vert-pale);color:var(--vert-foret);padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:bold;}
+.badge-warn{background:var(--creme);color:var(--brun);padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:bold;}
+.badge-err{background:var(--rose);color:#c00;padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:bold;}
+.form-remise{background:white;border-radius:8px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.06);margin-bottom:20px;}
+.form-remise h3{font-family:'Cooper Black',Georgia,serif;color:var(--terracotta);font-size:1rem;margin-bottom:16px;}
+.form-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;}
+.form-group{display:flex;flex-direction:column;gap:4px;}
+.form-group label{font-size:0.78rem;color:#666;font-weight:bold;}
+.form-group input,.form-group select{padding:7px 10px;border:1px solid var(--bordure);border-radius:4px;font-size:0.88rem;font-family:Helvetica,Arial,sans-serif;}
+.form-group.wide input{width:280px;}
+.btn-add{background:var(--vert-foret);color:white;border:none;padding:8px 18px;border-radius:4px;font-size:0.88rem;cursor:pointer;font-weight:bold;height:34px;}
+.btn-del{background:none;border:none;color:#c00;cursor:pointer;font-size:1rem;padding:0 4px;}
+.loading{display:flex;align-items:center;gap:10px;padding:20px;color:#888;font-size:0.88rem;}
+.spinner{width:18px;height:18px;border:2px solid #ddd;border-top-color:var(--terracotta);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.empty-state{padding:40px;text-align:center;color:#aaa;font-size:0.88rem;}
+.empty-state strong{display:block;font-size:1.1rem;margin-bottom:8px;color:#ccc;}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.section-title{font-family:'Cooper Black',Georgia,serif;color:var(--anthracite);font-size:1.1rem;}
+.section-title span{color:var(--terracotta);}
+.btn-export{background:var(--bleu-gris);color:white;border:none;padding:8px 16px;border-radius:4px;font-size:0.82rem;cursor:pointer;font-weight:bold;}
+.explication-input{border:1px dashed var(--bordure);background:transparent;font-size:0.8rem;padding:3px 6px;border-radius:3px;width:180px;font-family:Helvetica,Arial,sans-serif;}
+.synth-row-ok td{background:rgba(208,227,185,0.2);} .synth-row-warn td{background:rgba(251,217,221,0.2);}
+footer{text-align:center;padding:16px;font-size:0.75rem;color:#aaa;margin-top:40px;}
+footer span{color:var(--terracotta);}
 </style>
 </head>
 <body>
-
 <header>
   <div>
     <div class="logo">Contrées Vertes</div>
     <div class="subtitle">Contrôle Caisse Boutique</div>
   </div>
-  <div style="display:flex;align-items:center;gap:12px;">
-    <select class="annee-select" id="annee-select" onchange="changeAnnee(this.value)">
-      <option value="2024">2024</option>
-      <option value="2025">2025</option>
-      <option value="2026" selected>2026</option>
-    </select>
-  </div>
+  <select class="annee-select" id="annee-select" onchange="changeAnnee(this.value)">
+    <option value="2024">2024</option>
+    <option value="2025">2025</option>
+    <option value="2026" selected>2026</option>
+  </select>
 </header>
 
-<!-- CONFIG PROXY GAS -->
 <div id="config-panel">
   <label>URL du proxy GAS</label>
-  <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/.../exec" style="width:440px;" value="">
+  <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/.../exec" style="width:440px;">
   <button class="btn-connect" onclick="connecterProxy()">Connecter</button>
-  <span id="connect-status" class="status-loading" style="display:none;"></span>
-  <a href="https://script.google.com" target="_blank" style="font-size:0.75rem;color:var(--bleu-gris);margin-left:8px;">→ Google Apps Script</a>
+  <span id="connect-status"></span>
+  <a href="https://script.google.com" target="_blank" style="font-size:0.75rem;color:var(--bleu-gris);">→ Google Apps Script</a>
 </div>
 
-<!-- ONGLETS -->
 <nav class="tabs">
-  <button class="active" onclick="showTab('ventes', this)">Ventes Hiboutik</button>
-  <button onclick="showTab('remises', this)">Remises en banque</button>
-  <button onclick="showTab('controle', this)">Contrôle mensuel</button>
-  <button onclick="showTab('synthese', this)">Synthèse annuelle</button>
+  <button class="active" onclick="showTab('ventes',this)">Ventes Hiboutik</button>
+  <button onclick="showTab('remises',this)">Remises en banque</button>
+  <button onclick="showTab('controle',this)">Contrôle mensuel</button>
+  <button onclick="showTab('synthese',this)">Synthèse annuelle</button>
 </nav>
 
 <main>
-
-  <!-- ONGLET 1 : VENTES -->
+  <!-- ONGLET VENTES -->
   <div id="tab-ventes" class="tab-panel active">
     <div class="section-header">
       <div class="section-title">Ventes <span id="ventes-mois-label">-</span></div>
@@ -398,22 +114,20 @@
         <button class="btn-export" onclick="chargerVentesMois()">↻ Actualiser depuis Hiboutik</button>
       </div>
     </div>
-
     <div class="month-selector" id="month-selector-ventes"></div>
-
     <div id="ventes-cards" class="cards-grid"></div>
-    <div id="ventes-loading" class="loading" style="display:none;"><div class="spinner"></div> Chargement depuis Hiboutik...</div>
+    <div id="ventes-loading" class="loading" style="display:none;"><div class="spinner"></div><span>Chargement...</span></div>
     <div id="ventes-table-wrap"></div>
   </div>
 
-  <!-- ONGLET 2 : REMISES -->
+  <!-- ONGLET REMISES -->
   <div id="tab-remises" class="tab-panel">
     <div class="form-remise">
       <h3>Enregistrer une remise en banque</h3>
       <div class="form-row">
         <div class="form-group">
           <label>Date de remise</label>
-          <input type="date" id="rem-date" value="">
+          <input type="date" id="rem-date">
         </div>
         <div class="form-group">
           <label>Mois concerné</label>
@@ -443,43 +157,28 @@
         <button class="btn-add" onclick="ajouterRemise()">+ Ajouter</button>
       </div>
     </div>
-
     <div class="section-header">
       <div class="section-title">Remises enregistrées - <span id="remises-annee-label">2026</span></div>
       <button class="btn-export" onclick="exporterRemises()">⬇ Export CSV</button>
     </div>
-
     <div class="table-wrap">
-      <table id="table-remises">
-        <thead>
-          <tr>
-            <th>Date remise</th>
-            <th>Mois</th>
-            <th>Mode</th>
-            <th style="text-align:right">Montant (€)</th>
-            <th>Référence</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="tbody-remises">
-          <tr><td colspan="6" class="empty-state"><strong>Aucune remise</strong>Ajoutez vos premières remises ci-dessus</td></tr>
-        </tbody>
+      <table>
+        <thead><tr><th>Date remise</th><th>Mois</th><th>Mode</th><th style="text-align:right">Montant (€)</th><th>Référence</th><th></th></tr></thead>
+        <tbody id="tbody-remises"><tr><td colspan="6" class="empty-state"><strong>Aucune remise</strong>Ajoutez vos premières remises ci-dessus</td></tr></tbody>
       </table>
     </div>
   </div>
 
-  <!-- ONGLET 3 : CONTRÔLE -->
+  <!-- ONGLET CONTROLE -->
   <div id="tab-controle" class="tab-panel">
     <div class="section-header">
       <div class="section-title">Contrôle mensuel - <span id="controle-annee-label">2026</span></div>
     </div>
-
     <div class="month-selector" id="month-selector-controle"></div>
-
     <div id="controle-content"></div>
   </div>
 
-  <!-- ONGLET 4 : SYNTHÈSE -->
+  <!-- ONGLET SYNTHESE -->
   <div id="tab-synthese" class="tab-panel">
     <div class="section-header">
       <div class="section-title">Synthèse annuelle - <span id="synthese-annee-label">2026</span></div>
@@ -487,54 +186,39 @@
     </div>
     <div class="table-wrap">
       <table>
-        <thead>
-          <tr>
-            <th>Mois</th>
-            <th style="text-align:right">CB Hiboutik</th>
-            <th style="text-align:right">CB remis</th>
-            <th style="text-align:right">Chèques Hiboutik</th>
-            <th style="text-align:right">Chèques remis</th>
-            <th style="text-align:right">Espèces Hiboutik</th>
-            <th style="text-align:right">Espèces remises</th>
-            <th style="text-align:right">Total ventes</th>
-            <th style="text-align:right">Total remis</th>
-            <th style="text-align:right">Écart</th>
-          </tr>
-        </thead>
+        <thead><tr>
+          <th>Mois</th>
+          <th style="text-align:right">CB Hiboutik</th><th style="text-align:right">CB remis</th>
+          <th style="text-align:right">Chèques Hiboutik</th><th style="text-align:right">Chèques remis</th>
+          <th style="text-align:right">Espèces Hiboutik</th><th style="text-align:right">Espèces remises</th>
+          <th style="text-align:right">Total ventes</th><th style="text-align:right">Total remis</th>
+          <th style="text-align:right">Écart</th>
+        </tr></thead>
         <tbody id="tbody-synthese"></tbody>
       </table>
     </div>
   </div>
-
 </main>
 
-<footer>Contrées Vertes - <span>Boutique du Territoire</span> - Contrôle caisse v1.0</footer>
+<footer>Contrées Vertes - <span>Boutique du Territoire</span> - Contrôle caisse v2.0</footer>
 
 <script>
-// ============================================================
-// ÉTAT GLOBAL
-// ============================================================
 const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 let anneeActive = 2026;
-let moisActifVentes = new Date().getMonth(); // index 0-11
+let moisActifVentes = new Date().getMonth();
 let moisActifControle = new Date().getMonth();
-let ventesMoisCache = {}; // { "2026-01": { CB, Cheques, Especes } }
-let remises = []; // tableau des remises persistées
+let ventesMoisCache = {};
+let remises = [];
 let hibConnecte = false;
+const explications = {};
 
-// ============================================================
-// INIT
-// ============================================================
+// ---- INIT ----
 document.addEventListener('DOMContentLoaded', async () => {
-  const today = new Date();
-  document.getElementById('rem-date').value = today.toISOString().split('T')[0];
-
-  // Charger l'URL GAS sauvegardée
+  document.getElementById('rem-date').value = new Date().toISOString().split('T')[0];
   try {
-    const savedUrl = await window.storage.get('gas_url');
-    if (savedUrl) document.getElementById('gas-url').value = savedUrl.value;
+    const s = await window.storage.get('gas_url');
+    if (s) document.getElementById('gas-url').value = s.value;
   } catch(e) {}
-
   await chargerRemises();
   buildMonthSelectors();
   renderTableRemises();
@@ -543,9 +227,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   showSaisieManuelle();
 });
 
-// ============================================================
-// NAVIGATION ONGLETS
-// ============================================================
+// ---- TABS ----
 function showTab(name, btn) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
@@ -558,9 +240,9 @@ function showTab(name, btn) {
 function changeAnnee(val) {
   anneeActive = parseInt(val);
   ventesMoisCache = {};
-  document.getElementById('remises-annee-label').textContent = anneeActive;
-  document.getElementById('controle-annee-label').textContent = anneeActive;
-  document.getElementById('synthese-annee-label').textContent = anneeActive;
+  ['remises-annee-label','controle-annee-label','synthese-annee-label'].forEach(id => {
+    document.getElementById(id).textContent = anneeActive;
+  });
   buildMonthSelectors();
   renderTableRemises();
   renderControle();
@@ -568,16 +250,15 @@ function changeAnnee(val) {
   showSaisieManuelle();
 }
 
-// ============================================================
-// SÉLECTEURS DE MOIS
-// ============================================================
+// ---- MOIS ----
 function buildMonthSelectors() {
   ['ventes','controle'].forEach(tab => {
     const el = document.getElementById('month-selector-' + tab);
     el.innerHTML = '';
+    const actif = tab === 'ventes' ? moisActifVentes : moisActifControle;
     MOIS.forEach((m, i) => {
       const btn = document.createElement('button');
-      btn.className = 'month-btn' + (i === (tab === 'ventes' ? moisActifVentes : moisActifControle) ? ' active' : '');
+      btn.className = 'month-btn' + (i === actif ? ' active' : '');
       btn.textContent = m;
       btn.onclick = () => selectMois(tab, i, btn);
       el.appendChild(btn);
@@ -589,30 +270,22 @@ function buildMonthSelectors() {
 function selectMois(tab, idx, btn) {
   document.querySelectorAll('#month-selector-' + tab + ' .month-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  if (tab === 'ventes') {
-    moisActifVentes = idx;
-    updateMoisLabel();
-    showSaisieManuelle();
-  } else {
-    moisActifControle = idx;
-    renderControle();
-  }
+  if (tab === 'ventes') { moisActifVentes = idx; updateMoisLabel(); showSaisieManuelle(); }
+  else { moisActifControle = idx; renderControle(); }
 }
 
 function updateMoisLabel() {
   document.getElementById('ventes-mois-label').textContent = MOIS[moisActifVentes] + ' ' + anneeActive;
 }
 
-// ============================================================
-// CONNEXION PROXY GAS
-// ============================================================
+// ---- CONNEXION PROXY ----
 async function connecterProxy() {
   const gasUrl = document.getElementById('gas-url').value.trim();
-  if (!gasUrl || !gasUrl.startsWith('https://script.google.com')) {
-    afficherStatus('URL invalide - collez l'URL de déploiement du script GAS', 'err');
+  if (!gasUrl || !gasUrl.includes('script.google.com')) {
+    afficherStatus('URL invalide', 'err');
     return;
   }
-  afficherStatus('Test de connexion...', 'loading');
+  afficherStatus('Connexion...', 'loading');
   try {
     const resp = await fetch(gasUrl + '?action=ping');
     const data = await resp.json();
@@ -621,7 +294,7 @@ async function connecterProxy() {
       afficherStatus('Proxy connecté ✓', 'ok');
       try { await window.storage.set('gas_url', gasUrl); } catch(e) {}
     } else {
-      afficherStatus('Erreur proxy: ' + (data.error || 'inconnu'), 'err');
+      afficherStatus('Erreur: ' + (data.error || 'inconnu'), 'err');
     }
   } catch(e) {
     afficherStatus('Connexion échouée: ' + e.message, 'err');
@@ -635,105 +308,127 @@ function afficherStatus(msg, type) {
   el.style.display = 'inline-block';
 }
 
-// ============================================================
-// DIAGNOSTIC ENDPOINTS (désactivé - remplacé par proxy GAS)
-// ============================================================
-async function detecterEndpoints() {}
-
-// ============================================================
-// CHARGEMENT VENTES VIA PROXY GAS
-// ============================================================
+// ---- CHARGEMENT VENTES VIA GAS ----
 async function chargerVentesMois() {
   const moisIdx = moisActifVentes;
   const cacheKey = anneeActive + '-' + String(moisIdx + 1).padStart(2, '0');
+  const gasUrl = document.getElementById('gas-url').value.trim();
+
+  if (!hibConnecte || !gasUrl) { showSaisieManuelle(); return; }
 
   document.getElementById('ventes-loading').style.display = 'flex';
   document.getElementById('ventes-cards').innerHTML = '';
   document.getElementById('ventes-table-wrap').innerHTML = '';
 
-  const gasUrl = document.getElementById('gas-url').value.trim();
-  if (!hibConnecte || !gasUrl) {
-    document.getElementById('ventes-loading').style.display = 'none';
-    showSaisieManuelle();
-    return;
-  }
-
   const moisNum = String(moisIdx + 1).padStart(2, '0');
-  const url = `${gasUrl}?action=ventes&annee=${anneeActive}&mois=${moisNum}`;
-
   try {
-    document.getElementById('ventes-loading').querySelector('div + *') && 
-      (document.getElementById('ventes-loading').lastChild.textContent = `Chargement ${MOIS[moisIdx]} ${anneeActive} depuis Hiboutik...`);
-
-    const resp = await fetch(url);
+    const resp = await fetch(gasUrl + '?action=ventes&annee=' + anneeActive + '&mois=' + moisNum);
     const data = await resp.json();
-
     if (!data.ok) throw new Error(data.error || 'Erreur proxy');
-
     ventesMoisCache[cacheKey] = {
       CB: data.totaux.CB || 0,
       Cheques: data.totaux.Cheques || 0,
       Especes: data.totaux.Especes || 0
     };
     await sauvegarderVentes();
-
     document.getElementById('ventes-loading').style.display = 'none';
     renderVentesCards(ventesMoisCache[cacheKey]);
-
-    // Afficher le détail des lignes
-    renderVentesTable(data.lignes || [], {});
+    renderVentesTable(data.lignes || []);
     renderControle();
     renderSynthese();
-
-    if (data.nb_erreurs > 0) {
-      document.getElementById('ventes-table-wrap').insertAdjacentHTML('beforeend',
-        `<p style="font-size:0.78rem;color:var(--brun);margin-top:6px;">⚠ ${data.nb_erreurs} vente(s) sans paiement détaillé</p>`);
-    }
-
   } catch(e) {
     document.getElementById('ventes-loading').style.display = 'none';
     document.getElementById('ventes-table-wrap').innerHTML =
-      `<div class="empty-state"><strong>Erreur de chargement</strong>${e.message}</div>`;
+      '<div class="empty-state"><strong>Erreur</strong>' + e.message + '</div>';
     showSaisieManuelle();
   }
 }
 
-function categoriserPaiement(typeName) {
-  typeName = (typeName || '').toLowerCase();
-  if (['cb','carte','sumup','card','tpe','visa','master'].some(m => typeName.includes(m))) return 'CB';
-  if (['chèque','cheque'].some(m => typeName.includes(m))) return 'Cheques';
-  if (['espèce','espece','cash','liquide'].some(m => typeName.includes(m))) return 'Especes';
-  return 'Autres';
+// ---- SAISIE MANUELLE ----
+function showSaisieManuelle() {
+  const moisIdx = moisActifVentes;
+  const cacheKey = anneeActive + '-' + String(moisIdx + 1).padStart(2, '0');
+  const v = ventesMoisCache[cacheKey] || { CB: 0, Cheques: 0, Especes: 0 };
+  const deja = !!(v.CB || v.Cheques || v.Especes);
+
+  document.getElementById('ventes-table-wrap').innerHTML =
+    '<div class="form-remise" style="border-left:4px solid var(--terracotta);">' +
+    '<h3 style="color:var(--anthracite);">Saisie des ventes - ' + MOIS[moisIdx] + ' ' + anneeActive + '</h3>' +
+    '<p style="font-size:0.82rem;color:#888;margin-bottom:16px;">Depuis Hiboutik : <strong>Ventes &gt; Rapport des ventes</strong>, notez les totaux par mode de paiement.</p>' +
+    '<div class="form-row" style="gap:20px;">' +
+    '<div class="form-group"><label style="color:var(--bleu-gris);">CB / TPE (€)</label>' +
+    '<input type="number" id="man-cb" step="0.01" value="' + (v.CB || '') + '" placeholder="0,00" style="width:150px;border-color:var(--bleu-gris);"></div>' +
+    '<div class="form-group"><label style="color:var(--vert-foret);">Chèques (€)</label>' +
+    '<input type="number" id="man-cheque" step="0.01" value="' + (v.Cheques || '') + '" placeholder="0,00" style="width:150px;border-color:var(--vert-foret);"></div>' +
+    '<div class="form-group"><label style="color:var(--terracotta);">Espèces (€)</label>' +
+    '<input type="number" id="man-especes" step="0.01" value="' + (v.Especes || '') + '" placeholder="0,00" style="width:150px;border-color:var(--terracotta);"></div>' +
+    '<button class="btn-add" onclick="sauvegarderManuel()" style="background:var(--terracotta);height:36px;padding:0 24px;">' +
+    (deja ? '↻ Mettre à jour' : '✓ Enregistrer') + '</button></div>' +
+    (deja ? '<p style="font-size:0.78rem;color:var(--vert-foret);margin-top:10px;">✓ Données enregistrées pour ce mois</p>' : '') +
+    '</div>';
+
+  if (deja) renderVentesCards(v);
 }
 
-// ============================================================
-// REMISES EN BANQUE
-// ============================================================
+async function sauvegarderManuel() {
+  const moisIdx = moisActifVentes;
+  const cacheKey = anneeActive + '-' + String(moisIdx + 1).padStart(2, '0');
+  ventesMoisCache[cacheKey] = {
+    CB: parseFloat(document.getElementById('man-cb').value) || 0,
+    Cheques: parseFloat(document.getElementById('man-cheque').value) || 0,
+    Especes: parseFloat(document.getElementById('man-especes').value) || 0
+  };
+  await sauvegarderVentes();
+  renderVentesCards(ventesMoisCache[cacheKey]);
+  showSaisieManuelle();
+  renderControle();
+  renderSynthese();
+}
+
+// ---- AFFICHAGE VENTES ----
+function renderVentesCards(v) {
+  const total = (v.CB||0) + (v.Cheques||0) + (v.Especes||0);
+  document.getElementById('ventes-cards').innerHTML =
+    '<div class="card cb"><div class="card-label">CB / TPE</div><div class="card-value">' + fmt(v.CB||0) + '</div><div class="card-sub">' + (total>0?Math.round((v.CB||0)/total*100):0) + '% du total</div></div>' +
+    '<div class="card cheque"><div class="card-label">Chèques</div><div class="card-value">' + fmt(v.Cheques||0) + '</div><div class="card-sub">' + (total>0?Math.round((v.Cheques||0)/total*100):0) + '% du total</div></div>' +
+    '<div class="card especes"><div class="card-label">Espèces</div><div class="card-value">' + fmt(v.Especes||0) + '</div><div class="card-sub">' + (total>0?Math.round((v.Especes||0)/total*100):0) + '% du total</div></div>' +
+    '<div class="card total"><div class="card-label">Total mois</div><div class="card-value">' + fmt(total) + '</div></div>';
+}
+
+function renderVentesTable(lignes) {
+  if (!lignes || lignes.length === 0) return;
+  const modeClass = m => m === 'CB' ? 'cb' : m === 'Cheques' ? 'cheque' : 'especes';
+  const rows = lignes.slice(0,200).map(l =>
+    '<tr><td>' + (l.date||'') + '</td><td>#' + (l.sale_id||'') + '</td>' +
+    '<td class="mode-' + modeClass(l.mode) + '">' + (l.type||l.mode) + '</td>' +
+    '<td class="num">' + fmt(l.montant) + '</td></tr>'
+  ).join('');
+  document.getElementById('ventes-table-wrap').innerHTML =
+    '<div class="table-wrap"><table><thead><tr><th>Date</th><th>N° Vente</th><th>Mode</th><th style="text-align:right">Montant</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+
+// ---- REMISES ----
 async function chargerRemises() {
   try {
-    const key = 'remises_' + anneeActive;
-    const saved = await window.storage.get(key);
-    remises = saved ? JSON.parse(saved.value) : [];
-  } catch(e) {
-    remises = [];
-  }
-  // Charger aussi les ventes sauvegardées
+    const s = await window.storage.get('remises_' + anneeActive);
+    remises = s ? JSON.parse(s.value) : [];
+  } catch(e) { remises = []; }
   try {
-    const saved = await window.storage.get('ventes_' + anneeActive);
-    if (saved) ventesMoisCache = { ...ventesMoisCache, ...JSON.parse(saved.value) };
+    const s = await window.storage.get('ventes_' + anneeActive);
+    if (s) Object.assign(ventesMoisCache, JSON.parse(s.value));
+  } catch(e) {}
+  try {
+    const s = await window.storage.get('explications_' + anneeActive);
+    if (s) Object.assign(explications, JSON.parse(s.value));
   } catch(e) {}
 }
 
 async function sauvegarderRemises() {
-  try {
-    await window.storage.set('remises_' + anneeActive, JSON.stringify(remises));
-  } catch(e) {}
+  try { await window.storage.set('remises_' + anneeActive, JSON.stringify(remises)); } catch(e) {}
 }
 
 async function sauvegarderVentes() {
-  try {
-    await window.storage.set('ventes_' + anneeActive, JSON.stringify(ventesMoisCache));
-  } catch(e) {}
+  try { await window.storage.set('ventes_' + anneeActive, JSON.stringify(ventesMoisCache)); } catch(e) {}
 }
 
 async function ajouterRemise() {
@@ -742,18 +437,12 @@ async function ajouterRemise() {
   const mode = document.getElementById('rem-mode').value;
   const montant = parseFloat(document.getElementById('rem-montant').value);
   const ref = document.getElementById('rem-ref').value.trim();
-
-  if (!date || isNaN(montant) || montant <= 0) {
-    alert('Date et montant obligatoires');
-    return;
-  }
-
+  if (!date || isNaN(montant) || montant <= 0) { alert('Date et montant obligatoires'); return; }
   remises.push({ id: Date.now(), date, mois, mode, montant, ref });
   await sauvegarderRemises();
   renderTableRemises();
   renderControle();
   renderSynthese();
-
   document.getElementById('rem-montant').value = '';
   document.getElementById('rem-ref').value = '';
 }
@@ -772,245 +461,155 @@ function renderTableRemises() {
     tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><strong>Aucune remise</strong>Ajoutez vos premières remises ci-dessus</td></tr>';
     return;
   }
-  const sorted = [...remises].sort((a,b) => a.date.localeCompare(b.date));
-  tbody.innerHTML = sorted.map(r => `
-    <tr>
-      <td>${formatDate(r.date)}</td>
-      <td>${r.mois}</td>
-      <td class="mode-${r.mode === 'CB' ? 'cb' : r.mode === 'Chèques' ? 'cheque' : 'especes'}">${r.mode}</td>
-      <td class="num">${fmt(r.montant)}</td>
-      <td>${r.ref || '-'}</td>
-      <td><button class="btn-del" onclick="supprimerRemise(${r.id})" title="Supprimer">✕</button></td>
-    </tr>
-  `).join('');
+  const modeClass = m => m === 'CB' ? 'cb' : m === 'Chèques' ? 'cheque' : 'especes';
+  tbody.innerHTML = [...remises].sort((a,b) => a.date.localeCompare(b.date)).map(r =>
+    '<tr><td>' + fmtDate(r.date) + '</td><td>' + r.mois + '</td>' +
+    '<td class="mode-' + modeClass(r.mode) + '">' + r.mode + '</td>' +
+    '<td class="num">' + fmt(r.montant) + '</td><td>' + (r.ref||'-') + '</td>' +
+    '<td><button class="btn-del" onclick="supprimerRemise(' + r.id + ')">✕</button></td></tr>'
+  ).join('');
 }
 
-// ============================================================
-// CONTRÔLE MENSUEL
-// ============================================================
+// ---- CONTROLE MENSUEL ----
 function renderControle() {
   const moisIdx = moisActifControle;
   const moisNom = MOIS[moisIdx];
   const cacheKey = anneeActive + '-' + String(moisIdx + 1).padStart(2, '0');
-  const v = ventesMoisCache[cacheKey] || { CB: 0, Cheques: 0, Especes: 0 };
-
-  // Calculer les remises pour ce mois
-  const remisesMois = remises.filter(r => r.mois === moisNom);
-  const remCB = remisesMois.filter(r => r.mode === 'CB').reduce((s, r) => s + r.montant, 0);
-  const remCheque = remisesMois.filter(r => r.mode === 'Chèques').reduce((s, r) => s + r.montant, 0);
-  const remEspeces = remisesMois.filter(r => r.mode === 'Espèces').reduce((s, r) => s + r.montant, 0);
+  const v = ventesMoisCache[cacheKey] || { CB:0, Cheques:0, Especes:0 };
+  const remMois = remises.filter(r => r.mois === moisNom);
+  const remCB = remMois.filter(r => r.mode === 'CB').reduce((s,r) => s+r.montant, 0);
+  const remCH = remMois.filter(r => r.mode === 'Chèques').reduce((s,r) => s+r.montant, 0);
+  const remES = remMois.filter(r => r.mode === 'Espèces').reduce((s,r) => s+r.montant, 0);
 
   const data = [
-    { mode: 'CB', ventes: v.CB || 0, remis: remCB },
-    { mode: 'Chèques', ventes: v.Cheques || 0, remis: remCheque },
-    { mode: 'Espèces', ventes: v.Especes || 0, remis: remEspeces }
+    { mode:'CB', ventes:v.CB||0, remis:remCB },
+    { mode:'Chèques', ventes:v.Cheques||0, remis:remCH },
+    { mode:'Espèces', ventes:v.Especes||0, remis:remES }
   ];
 
-  const rows = data.map(d => {
-    const ecart = Math.round((d.ventes - d.remis) * 100) / 100;
-    let badgeClass = 'badge-ok', badgeLabel = 'OK';
-    if (Math.abs(ecart) > 0.01) {
-      if (ecart > 0) { badgeClass = 'badge-warn'; badgeLabel = 'À expliquer'; }
-      else { badgeClass = 'badge-err'; badgeLabel = 'Sur-remise'; }
-    }
-    const ecartClass = Math.abs(ecart) < 0.01 ? 'ecart-ok' : ecart > 0 ? 'ecart-warn' : 'ecart-err';
-    const key = `expl_${anneeActive}_${moisIdx}_${d.mode}`;
+  const modeClass = m => m === 'CB' ? 'cb' : m === 'Chèques' ? 'cheque' : 'especes';
 
-    return `
-      <tr>
-        <td class="mode-${d.mode === 'CB' ? 'cb' : d.mode === 'Chèques' ? 'cheque' : 'especes'}">${d.mode}</td>
-        <td class="num">${fmt(d.ventes)}</td>
-        <td class="num">${fmt(d.remis)}</td>
-        <td class="num ${ecartClass}">${ecart >= 0 ? '+' : ''}${fmt(ecart)}</td>
-        <td><input class="explication-input" id="${key}" placeholder="Explication..." value="${getSavedExpl(key)}" onchange="saveExpl('${key}', this.value)"></td>
-        <td><span class="${badgeClass}">${badgeLabel}</span></td>
-      </tr>
-    `;
+  const rows = data.map(d => {
+    const ecart = Math.round((d.ventes - d.remis)*100)/100;
+    const ec = Math.abs(ecart)<0.01 ? 'ecart-ok' : ecart>0 ? 'ecart-warn' : 'ecart-err';
+    const badge = Math.abs(ecart)<0.01 ? '<span class="badge-ok">OK</span>' :
+      ecart>0 ? '<span class="badge-warn">A expliquer</span>' : '<span class="badge-err">Sur-remise</span>';
+    const key = 'expl_' + anneeActive + '_' + moisIdx + '_' + d.mode;
+    return '<tr><td class="mode-' + modeClass(d.mode) + '">' + d.mode + '</td>' +
+      '<td class="num">' + fmt(d.ventes) + '</td><td class="num">' + fmt(d.remis) + '</td>' +
+      '<td class="num ' + ec + '">' + (ecart>=0?'+':'') + fmt(ecart) + '</td>' +
+      '<td><input class="explication-input" value="' + (explications[key]||'') + '" placeholder="Explication..." onchange="saveExpl(\'' + key + '\',this.value)"></td>' +
+      '<td>' + badge + '</td></tr>';
   }).join('');
 
-  // Ligne totaux
-  const totVentes = data.reduce((s,d) => s+d.ventes, 0);
-  const totRemis = data.reduce((s,d) => s+d.remis, 0);
-  const totEcart = Math.round((totVentes - totRemis) * 100) / 100;
-  const totClass = Math.abs(totEcart) < 0.01 ? 'ecart-ok' : totEcart > 0 ? 'ecart-warn' : 'ecart-err';
+  const totV = data.reduce((s,d)=>s+d.ventes,0);
+  const totR = data.reduce((s,d)=>s+d.remis,0);
+  const totE = Math.round((totV-totR)*100)/100;
+  const totEc = Math.abs(totE)<0.01 ? 'ecart-ok' : totE>0 ? 'ecart-warn' : 'ecart-err';
 
-  // Détail des remises du mois
-  const detailRows = remisesMois.length === 0
-    ? '<tr><td colspan="5" class="empty-state">Aucune remise enregistrée pour ce mois</td></tr>'
-    : [...remisesMois].sort((a,b) => a.date.localeCompare(b.date)).map(r => `
-        <tr>
-          <td>${formatDate(r.date)}</td>
-          <td class="mode-${r.mode === 'CB' ? 'cb' : r.mode === 'Chèques' ? 'cheque' : 'especes'}">${r.mode}</td>
-          <td class="num">${fmt(r.montant)}</td>
-          <td>${r.ref || '-'}</td>
-          <td><button class="btn-del" onclick="supprimerRemise(${r.id});renderControle();" title="Supprimer">✕</button></td>
-        </tr>
-      `).join('');
+  const detailRows = remMois.length === 0
+    ? '<tr><td colspan="5" class="empty-state">Aucune remise pour ce mois</td></tr>'
+    : [...remMois].sort((a,b)=>a.date.localeCompare(b.date)).map(r =>
+        '<tr><td>' + fmtDate(r.date) + '</td><td class="mode-' + modeClass(r.mode) + '">' + r.mode + '</td>' +
+        '<td class="num">' + fmt(r.montant) + '</td><td>' + (r.ref||'-') + '</td>' +
+        '<td><button class="btn-del" onclick="supprimerRemise(' + r.id + ');renderControle();">✕</button></td></tr>'
+      ).join('');
 
-  document.getElementById('controle-content').innerHTML = `
-    <div class="table-wrap" style="margin-bottom:20px;">
-      <table>
-        <thead>
-          <tr>
-            <th>Mode paiement</th>
-            <th style="text-align:right">Ventes Hiboutik (€)</th>
-            <th style="text-align:right">Remis en banque (€)</th>
-            <th style="text-align:right">Écart (€)</th>
-            <th>Explication</th>
-            <th>Statut</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows}
-          <tr style="background:#f0f0ee;font-weight:bold;">
-            <td>TOTAL</td>
-            <td class="num">${fmt(totVentes)}</td>
-            <td class="num">${fmt(totRemis)}</td>
-            <td class="num ${totClass}">${totEcart >= 0 ? '+' : ''}${fmt(totEcart)}</td>
-            <td colspan="2"></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="section-header" style="margin-top:24px;">
-      <div class="section-title">Détail des remises - <span>${moisNom} ${anneeActive}</span></div>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Date</th><th>Mode</th><th style="text-align:right">Montant (€)</th><th>Référence</th><th></th></tr></thead>
-        <tbody>${detailRows}</tbody>
-      </table>
-    </div>
-  `;
+  document.getElementById('controle-content').innerHTML =
+    '<div class="table-wrap" style="margin-bottom:20px;"><table>' +
+    '<thead><tr><th>Mode</th><th style="text-align:right">Ventes Hiboutik</th><th style="text-align:right">Remis en banque</th><th style="text-align:right">Ecart</th><th>Explication</th><th>Statut</th></tr></thead>' +
+    '<tbody>' + rows +
+    '<tr style="background:#f0f0ee;font-weight:bold;"><td>TOTAL</td><td class="num">' + fmt(totV) + '</td><td class="num">' + fmt(totR) + '</td>' +
+    '<td class="num ' + totEc + '">' + (totE>=0?'+':'') + fmt(totE) + '</td><td colspan="2"></td></tr>' +
+    '</tbody></table></div>' +
+    '<div class="section-header" style="margin-top:24px;"><div class="section-title">Remises - <span>' + moisNom + ' ' + anneeActive + '</span></div></div>' +
+    '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Mode</th><th style="text-align:right">Montant</th><th>Référence</th><th></th></tr></thead><tbody>' +
+    detailRows + '</tbody></table></div>';
 }
 
-// Explications persistées
-const explications = {};
-function getSavedExpl(key) {
-  return explications[key] || '';
-}
 async function saveExpl(key, val) {
   explications[key] = val;
-  try {
-    await window.storage.set('explications_' + anneeActive, JSON.stringify(explications));
-  } catch(e) {}
+  try { await window.storage.set('explications_' + anneeActive, JSON.stringify(explications)); } catch(e) {}
 }
 
-// ============================================================
-// SYNTHÈSE ANNUELLE
-// ============================================================
+// ---- SYNTHESE ----
 function renderSynthese() {
-  const tbody = document.getElementById('tbody-synthese');
-  let totCBv=0, totCHv=0, totESv=0, totCBr=0, totCHr=0, totESr=0;
-
-  const rows = MOIS.map((moisNom, i) => {
-    const cacheKey = anneeActive + '-' + String(i + 1).padStart(2, '0');
-    const v = ventesMoisCache[cacheKey] || { CB: 0, Cheques: 0, Especes: 0 };
-    const remMois = remises.filter(r => r.mois === moisNom);
-    const remCB = remMois.filter(r => r.mode === 'CB').reduce((s,r) => s+r.montant, 0);
-    const remCH = remMois.filter(r => r.mode === 'Chèques').reduce((s,r) => s+r.montant, 0);
-    const remES = remMois.filter(r => r.mode === 'Espèces').reduce((s,r) => s+r.montant, 0);
-    const totV = (v.CB||0) + (v.Cheques||0) + (v.Especes||0);
-    const totR = remCB + remCH + remES;
-    const ecart = Math.round((totV - totR) * 100) / 100;
+  let totCBv=0,totCHv=0,totESv=0,totCBr=0,totCHr=0,totESr=0;
+  const rows = MOIS.map((moisNom,i) => {
+    const ck = anneeActive + '-' + String(i+1).padStart(2,'0');
+    const v = ventesMoisCache[ck] || {};
+    const rm = remises.filter(r => r.mois === moisNom);
+    const rCB = rm.filter(r=>r.mode==='CB').reduce((s,r)=>s+r.montant,0);
+    const rCH = rm.filter(r=>r.mode==='Chèques').reduce((s,r)=>s+r.montant,0);
+    const rES = rm.filter(r=>r.mode==='Espèces').reduce((s,r)=>s+r.montant,0);
+    const tV = (v.CB||0)+(v.Cheques||0)+(v.Especes||0);
+    const tR = rCB+rCH+rES;
+    const ec = Math.round((tV-tR)*100)/100;
     totCBv+=v.CB||0; totCHv+=v.Cheques||0; totESv+=v.Especes||0;
-    totCBr+=remCB; totCHr+=remCH; totESr+=remES;
-    if (totV === 0 && totR === 0) return `<tr><td>${moisNom}</td><td class="num" colspan="8" style="color:#ccc">-</td></tr>`;
-    const ecartClass = Math.abs(ecart) < 0.01 ? 'ecart-ok' : ecart > 0 ? 'ecart-warn' : 'ecart-err';
-    const rowClass = Math.abs(ecart) < 0.01 ? 'synth-row-ok' : 'synth-row-warn';
-    return `
-      <tr class="${rowClass}">
-        <td><strong>${moisNom}</strong></td>
-        <td class="num">${fmt(v.CB||0)}</td>
-        <td class="num">${fmt(remCB)}</td>
-        <td class="num">${fmt(v.Cheques||0)}</td>
-        <td class="num">${fmt(remCH)}</td>
-        <td class="num">${fmt(v.Especes||0)}</td>
-        <td class="num">${fmt(remES)}</td>
-        <td class="num"><strong>${fmt(totV)}</strong></td>
-        <td class="num"><strong>${fmt(totR)}</strong></td>
-        <td class="num ${ecartClass}"><strong>${ecart >= 0 ? '+' : ''}${fmt(ecart)}</strong></td>
-      </tr>
-    `;
+    totCBr+=rCB; totCHr+=rCH; totESr+=rES;
+    if (tV===0 && tR===0) return '<tr><td>' + moisNom + '</td><td class="num" colspan="9" style="color:#ccc">-</td></tr>';
+    const ec2 = Math.abs(ec)<0.01 ? 'ecart-ok' : ec>0 ? 'ecart-warn' : 'ecart-err';
+    return '<tr class="' + (Math.abs(ec)<0.01?'synth-row-ok':'synth-row-warn') + '">' +
+      '<td><strong>' + moisNom + '</strong></td>' +
+      '<td class="num">' + fmt(v.CB||0) + '</td><td class="num">' + fmt(rCB) + '</td>' +
+      '<td class="num">' + fmt(v.Cheques||0) + '</td><td class="num">' + fmt(rCH) + '</td>' +
+      '<td class="num">' + fmt(v.Especes||0) + '</td><td class="num">' + fmt(rES) + '</td>' +
+      '<td class="num"><strong>' + fmt(tV) + '</strong></td><td class="num"><strong>' + fmt(tR) + '</strong></td>' +
+      '<td class="num ' + ec2 + '"><strong>' + (ec>=0?'+':'') + fmt(ec) + '</strong></td></tr>';
   }).join('');
-
-  const totV = totCBv+totCHv+totESv;
-  const totR = totCBr+totCHr+totESr;
-  const ecartTot = Math.round((totV - totR)*100)/100;
-  const ecartClass = Math.abs(ecartTot) < 0.01 ? 'ecart-ok' : ecartTot > 0 ? 'ecart-warn' : 'ecart-err';
-
-  tbody.innerHTML = rows + `
-    <tr style="background:var(--anthracite);color:white;font-weight:bold;">
-      <td>TOTAL ${anneeActive}</td>
-      <td class="num">${fmt(totCBv)}</td>
-      <td class="num">${fmt(totCBr)}</td>
-      <td class="num">${fmt(totCHv)}</td>
-      <td class="num">${fmt(totCHr)}</td>
-      <td class="num">${fmt(totESv)}</td>
-      <td class="num">${fmt(totESr)}</td>
-      <td class="num">${fmt(totV)}</td>
-      <td class="num">${fmt(totR)}</td>
-      <td class="num ${ecartClass}">${ecartTot >= 0 ? '+' : ''}${fmt(ecartTot)}</td>
-    </tr>
-  `;
+  const tV2=totCBv+totCHv+totESv, tR2=totCBr+totCHr+totESr;
+  const etot=Math.round((tV2-tR2)*100)/100;
+  const ec3=Math.abs(etot)<0.01?'ecart-ok':etot>0?'ecart-warn':'ecart-err';
+  document.getElementById('tbody-synthese').innerHTML = rows +
+    '<tr style="background:var(--anthracite);color:white;font-weight:bold;">' +
+    '<td>TOTAL ' + anneeActive + '</td>' +
+    '<td class="num">' + fmt(totCBv) + '</td><td class="num">' + fmt(totCBr) + '</td>' +
+    '<td class="num">' + fmt(totCHv) + '</td><td class="num">' + fmt(totCHr) + '</td>' +
+    '<td class="num">' + fmt(totESv) + '</td><td class="num">' + fmt(totESr) + '</td>' +
+    '<td class="num">' + fmt(tV2) + '</td><td class="num">' + fmt(tR2) + '</td>' +
+    '<td class="num ' + ec3 + '">' + (etot>=0?'+':'') + fmt(etot) + '</td></tr>';
 }
 
-// ============================================================
-// EXPORTS CSV
-// ============================================================
+// ---- EXPORTS ----
 function exporterRemises() {
-  const lines = ['Date remise;Mois;Mode;Montant (€);Référence'];
-  remises.sort((a,b) => a.date.localeCompare(b.date)).forEach(r => {
-    lines.push(`${r.date};${r.mois};${r.mode};${r.montant.toFixed(2)};${r.ref || ''}`);
-  });
-  telechargerCSV(lines.join('\n'), `remises_banque_${anneeActive}.csv`);
+  const lines = ['Date remise;Mois;Mode;Montant;Reference'];
+  [...remises].sort((a,b)=>a.date.localeCompare(b.date)).forEach(r =>
+    lines.push([r.date,r.mois,r.mode,r.montant.toFixed(2),r.ref||''].join(';'))
+  );
+  telechargerCSV(lines.join('\n'), 'remises_' + anneeActive + '.csv');
 }
 
 function exporterSynthese() {
   const lines = ['Mois;CB Hiboutik;CB remis;Cheques Hiboutik;Cheques remis;Especes Hiboutik;Especes remises;Total ventes;Total remis;Ecart'];
-  MOIS.forEach((m, i) => {
-    const cacheKey = anneeActive + '-' + String(i+1).padStart(2,'0');
-    const v = ventesMoisCache[cacheKey] || {};
-    const remMois = remises.filter(r => r.mois === m);
-    const remCB = remMois.filter(r => r.mode === 'CB').reduce((s,r) => s+r.montant, 0);
-    const remCH = remMois.filter(r => r.mode === 'Chèques').reduce((s,r) => s+r.montant, 0);
-    const remES = remMois.filter(r => r.mode === 'Espèces').reduce((s,r) => s+r.montant, 0);
-    const totV = (v.CB||0)+(v.Cheques||0)+(v.Especes||0);
-    const totR = remCB+remCH+remES;
-    lines.push([m,(v.CB||0).toFixed(2),remCB.toFixed(2),(v.Cheques||0).toFixed(2),remCH.toFixed(2),(v.Especes||0).toFixed(2),remES.toFixed(2),totV.toFixed(2),totR.toFixed(2),((totV-totR)).toFixed(2)].join(';'));
+  MOIS.forEach((m,i) => {
+    const ck = anneeActive+'-'+String(i+1).padStart(2,'0');
+    const v = ventesMoisCache[ck]||{};
+    const rm = remises.filter(r=>r.mois===m);
+    const rCB=rm.filter(r=>r.mode==='CB').reduce((s,r)=>s+r.montant,0);
+    const rCH=rm.filter(r=>r.mode==='Chèques').reduce((s,r)=>s+r.montant,0);
+    const rES=rm.filter(r=>r.mode==='Espèces').reduce((s,r)=>s+r.montant,0);
+    const tV=(v.CB||0)+(v.Cheques||0)+(v.Especes||0), tR=rCB+rCH+rES;
+    lines.push([m,(v.CB||0).toFixed(2),rCB.toFixed(2),(v.Cheques||0).toFixed(2),rCH.toFixed(2),(v.Especes||0).toFixed(2),rES.toFixed(2),tV.toFixed(2),tR.toFixed(2),(tV-tR).toFixed(2)].join(';'));
   });
-  telechargerCSV(lines.join('\n'), `synthese_${anneeActive}.csv`);
+  telechargerCSV(lines.join('\n'), 'synthese_' + anneeActive + '.csv');
 }
 
 function telechargerCSV(content, filename) {
-  const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  a.href = URL.createObjectURL(new Blob(['\uFEFF'+content],{type:'text/csv;charset=utf-8;'}));
   a.download = filename;
   a.click();
 }
 
-// ============================================================
-// UTILS
-// ============================================================
+// ---- UTILS ----
 function fmt(n) {
-  return (Math.round(n * 100) / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  return (Math.round(n*100)/100).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
 }
-
-function formatDate(d) {
+function fmtDate(d) {
   if (!d) return '';
   const p = d.split('-');
-  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d;
+  return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : d;
 }
-
-// Charger les explications sauvegardées
-(async () => {
-  try {
-    const saved = await window.storage.get('explications_' + anneeActive);
-    if (saved) Object.assign(explications, JSON.parse(saved.value));
-  } catch(e) {}
-})();
 </script>
 </body>
 </html>
