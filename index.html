@@ -370,17 +370,13 @@
   </div>
 </header>
 
-<!-- CONFIG HIBOUTIK -->
+<!-- CONFIG PROXY GAS -->
 <div id="config-panel">
-  <label>Compte Hiboutik</label>
-  <input type="text" id="hib-account" value="contreesvertestulle" placeholder="compte" style="width:200px;">
-  <label>Email</label>
-  <input type="text" id="hib-user" placeholder="adresse email du compte" style="width:220px;">
-  <label>Clé API</label>
-  <input type="password" id="hib-apikey" placeholder="clé API Hiboutik" style="width:200px;">
-  <button class="btn-connect" onclick="connecterHiboutik()">Connecter</button>
+  <label>URL du proxy GAS</label>
+  <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/.../exec" style="width:440px;" value="">
+  <button class="btn-connect" onclick="connecterProxy()">Connecter</button>
   <span id="connect-status" class="status-loading" style="display:none;"></span>
-  <a href="https://contreesvertestulle.hiboutik.com/settings/api" target="_blank" style="font-size:0.75rem;color:var(--bleu-gris);margin-left:4px;">→ Trouver ma clé API (Paramètres &gt; API)</a>
+  <a href="https://script.google.com" target="_blank" style="font-size:0.75rem;color:var(--bleu-gris);margin-left:8px;">→ Google Apps Script</a>
 </div>
 
 <!-- ONGLETS -->
@@ -533,28 +529,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   const today = new Date();
   document.getElementById('rem-date').value = today.toISOString().split('T')[0];
 
-  // Charger les identifiants sauvegardés
+  // Charger l'URL GAS sauvegardée
   try {
-    const savedCreds = await window.storage.get('hiboutik_creds');
-    if (savedCreds) {
-      const c = JSON.parse(savedCreds.value);
-      if (c.user) document.getElementById('hib-user').value = c.user;
-      if (c.apikey) document.getElementById('hib-apikey').value = c.apikey;
-    }
+    const savedUrl = await window.storage.get('gas_url');
+    if (savedUrl) document.getElementById('gas-url').value = savedUrl.value;
   } catch(e) {}
 
-  // Charger les remises
   await chargerRemises();
-
-  // Construire les sélecteurs de mois
   buildMonthSelectors();
-
-  // Afficher les remises
   renderTableRemises();
   renderControle();
   renderSynthese();
-
-  // Afficher la saisie manuelle par défaut (sans attendre la connexion API)
   showSaisieManuelle();
 });
 
@@ -566,14 +551,13 @@ function showTab(name, btn) {
   document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   btn.classList.add('active');
-
   if (name === 'controle') renderControle();
   if (name === 'synthese') renderSynthese();
 }
 
 function changeAnnee(val) {
   anneeActive = parseInt(val);
-  ventesMoisCache = {}; // vider le cache
+  ventesMoisCache = {};
   document.getElementById('remises-annee-label').textContent = anneeActive;
   document.getElementById('controle-annee-label').textContent = anneeActive;
   document.getElementById('synthese-annee-label').textContent = anneeActive;
@@ -581,7 +565,7 @@ function changeAnnee(val) {
   renderTableRemises();
   renderControle();
   renderSynthese();
-  chargerVentesMois();
+  showSaisieManuelle();
 }
 
 // ============================================================
@@ -608,7 +592,7 @@ function selectMois(tab, idx, btn) {
   if (tab === 'ventes') {
     moisActifVentes = idx;
     updateMoisLabel();
-    chargerVentesMois();
+    showSaisieManuelle();
   } else {
     moisActifControle = idx;
     renderControle();
@@ -620,76 +604,27 @@ function updateMoisLabel() {
 }
 
 // ============================================================
-// CONNEXION HIBOUTIK
+// CONNEXION PROXY GAS
 // ============================================================
-async function connecterHiboutik() {
-  const account = document.getElementById('hib-account').value.trim();
-  const user = document.getElementById('hib-user').value.trim();
-  const apikey = document.getElementById('hib-apikey').value.trim();
-
-  if (!user || !apikey) {
-    afficherStatus("Renseignez l'email et le mot de passe", 'err');
+async function connecterProxy() {
+  const gasUrl = document.getElementById('gas-url').value.trim();
+  if (!gasUrl || !gasUrl.startsWith('https://script.google.com')) {
+    afficherStatus('URL invalide - collez l'URL de déploiement du script GAS', 'err');
     return;
   }
-
-  // Vérifier si ouvert en local (file://)
-  if (window.location.protocol === 'file:') {
-    afficherStatus('Ouvert en local - hébergez sur GitHub Pages pour activer la connexion API', 'err');
-    showSaisieManuelle();
-    return;
-  }
-
-  afficherStatus('Connexion en cours...', 'loading');
-
-  let authHeader;
-  try { authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(user + ':' + apikey))); }
-  catch(e) { authHeader = 'Basic ' + btoa(user + ':' + apikey); }
-
-  // Tester plusieurs endpoints pour trouver celui qui répond
-  const endpoints = [
-    `https://${account}.hiboutik.com/api/products/?p=1`,
-    `https://${account}.hiboutik.com/api/payment_types/`
-  ];
-
-  let connected = false;
-  for (const url of endpoints) {
-    try {
-      const resp = await fetch(url, {
-        method: 'GET',
-        headers: { 'Authorization': authHeader, 'Accept': 'application/json' }
-      });
-      if (resp.ok) {
-        connected = true;
-        break;
-      } else if (resp.status === 401) {
-        afficherStatus('Clé API incorrecte (401) - vérifiez dans Paramètres > API', 'err');
-        showSaisieManuelle();
-        return;
-      } else if (resp.status === 403) {
-        afficherStatus('Accès refusé (403) - vérifiez les droits API du compte', 'err');
-        showSaisieManuelle();
-        return;
-      }
-      // 405 ou autre : essayer l'endpoint suivant
-    } catch(e) {
-      // CORS ou réseau
-      hibConnecte = false;
-      afficherStatus('Bloqué (CORS) - hébergez sur GitHub Pages pour activer la connexion', 'err');
-      showSaisieManuelle();
-      return;
+  afficherStatus('Test de connexion...', 'loading');
+  try {
+    const resp = await fetch(gasUrl + '?action=ping');
+    const data = await resp.json();
+    if (data.ok) {
+      hibConnecte = true;
+      afficherStatus('Proxy connecté ✓', 'ok');
+      try { await window.storage.set('gas_url', gasUrl); } catch(e) {}
+    } else {
+      afficherStatus('Erreur proxy: ' + (data.error || 'inconnu'), 'err');
     }
-  }
-
-  if (connected) {
-    hibConnecte = true;
-    afficherStatus('Connecté à Hiboutik ✓', 'ok');
-    try { await window.storage.set('hiboutik_creds', JSON.stringify({ user, apikey })); } catch(e) {}
-    // Découvrir les endpoints disponibles
-    await detecterEndpoints(account, authHeader);
-    chargerVentesMois();
-  } else {
-    afficherStatus('Connexion échouée - mode saisie manuelle actif', 'err');
-    showSaisieManuelle();
+  } catch(e) {
+    afficherStatus('Connexion échouée: ' + e.message, 'err');
   }
 }
 
@@ -701,48 +636,12 @@ function afficherStatus(msg, type) {
 }
 
 // ============================================================
-// DIAGNOSTIC ENDPOINTS
+// DIAGNOSTIC ENDPOINTS (désactivé - remplacé par proxy GAS)
 // ============================================================
-async function detecterEndpoints(account, authHeader) {
-  const candidats = [
-    `/api/sales/store/0/date/2026-06/`,
-    `/api/sales/store/1/date/2026-06/`,
-    `/api/completed_sales/2026/06/`,
-    `/api/sales/`,
-    `/api/sales/?p=1`,
-    `/api/closed_sales/`,
-    `/api/sales_payments/`
-  ];
-  const resultats = [];
-  for (const ep of candidats) {
-    try {
-      const r = await fetch(`https://${account}.hiboutik.com${ep}`, {
-        headers: { 'Authorization': authHeader, 'Accept': 'application/json' }
-      });
-      resultats.push({ ep, status: r.status, ok: r.ok });
-    } catch(e) {
-      resultats.push({ ep, status: 'CORS/ERR', ok: false });
-    }
-  }
-  // Trouver le premier qui marche
-  const ok = resultats.filter(r => r.ok);
-  console.log('Hiboutik endpoints testés:', resultats);
-  if (ok.length > 0) {
-    window._hibEndpointOk = ok[0].ep;
-    console.log('Endpoint OK:', window._hibEndpointOk);
-  }
-  // Afficher le résultat dans un panneau discret
-  const panel = document.createElement('div');
-  panel.id = 'diag-panel';
-  panel.style.cssText = 'position:fixed;bottom:10px;right:10px;background:#222;color:#0f0;font-size:11px;padding:10px;border-radius:6px;max-width:400px;z-index:9999;font-family:monospace;max-height:200px;overflow:auto;';
-  panel.innerHTML = '<strong style="color:#D88050">Diagnostic Hiboutik</strong><br>' +
-    resultats.map(r => `${r.ok ? '✓' : '✗'} ${r.ep} → <span style="color:${r.ok?'#0f0':'#f66'}">${r.status}</span>`).join('<br>') +
-    '<br><small style="color:#888;cursor:pointer" onclick="this.parentNode.remove()">✕ fermer</small>';
-  document.body.appendChild(panel);
-}
+async function detecterEndpoints() {}
 
 // ============================================================
-// CHARGEMENT VENTES HIBOUTIK
+// CHARGEMENT VENTES VIA PROXY GAS
 // ============================================================
 async function chargerVentesMois() {
   const moisIdx = moisActifVentes;
@@ -752,275 +651,59 @@ async function chargerVentesMois() {
   document.getElementById('ventes-cards').innerHTML = '';
   document.getElementById('ventes-table-wrap').innerHTML = '';
 
-  if (!hibConnecte) {
+  const gasUrl = document.getElementById('gas-url').value.trim();
+  if (!hibConnecte || !gasUrl) {
     document.getElementById('ventes-loading').style.display = 'none';
     showSaisieManuelle();
     return;
   }
 
-  const account = document.getElementById('hib-account').value.trim();
-  const user = document.getElementById('hib-user').value.trim();
-  const apikey = document.getElementById('hib-apikey').value.trim();
-  let authHeader;
-  try { authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(user + ':' + apikey))); }
-  catch(e) { authHeader = 'Basic ' + btoa(user + ':' + apikey); }
-
-  const annee = anneeActive;
   const moisNum = String(moisIdx + 1).padStart(2, '0');
-  const dateDebut = `${annee}-${moisNum}-01`;
-  const dernierJour = new Date(annee, moisIdx + 1, 0).getDate();
-  const dateFin = `${annee}-${moisNum}-${String(dernierJour).padStart(2,'0')}`;
+  const url = `${gasUrl}?action=ventes&annee=${anneeActive}&mois=${moisNum}`;
 
-  // Récupérer d'abord les types de paiement
-  let typeMap = {};
-  let paymentTypes = [];
   try {
-    const ptResp = await fetch(`https://${account}.hiboutik.com/api/payment_types/`, {
-      headers: { 'Authorization': authHeader, 'Accept': 'application/json' }
-    });
-    if (ptResp.ok) {
-      paymentTypes = await ptResp.json();
-      paymentTypes.forEach(pt => { typeMap[pt.payment_type_id] = pt.payment_type_name; });
-    }
-  } catch(e) {}
+    document.getElementById('ventes-loading').querySelector('div + *') && 
+      (document.getElementById('ventes-loading').lastChild.textContent = `Chargement ${MOIS[moisIdx]} ${anneeActive} depuis Hiboutik...`);
 
-  // Endpoints Hiboutik pour les ventes clôturées par date
-  // Source : hiboutik-api-client README - "LIST Closed sales by Store ID and Date"
-  // Format : GET /sales/store/{store_id}/date/{date}/ (ventes d'une journée)
-  // On récupère chaque jour du mois et on agrège
-  // Ou : GET /sales/{sale_id}/ pour une vente précise
-  // Endpoint mois entier : /sales/store/0/date/{annee}-{mois}/  (0 = tous les magasins)
-  const endpointsToTry = [
-    `https://${account}.hiboutik.com/api/sales/store/0/date/${annee}-${moisNum}/`,
-    `https://${account}.hiboutik.com/api/sales/store/1/date/${annee}-${moisNum}/`,
-    `https://${account}.hiboutik.com/api/completed_sales/${annee}/${moisNum}/`,
-    `https://${account}.hiboutik.com/api/sales/search/date/${dateDebut}/${dateFin}/`
-  ];
+    const resp = await fetch(url);
+    const data = await resp.json();
 
-  let allSales = [];
-  let endpointOk = '';
+    if (!data.ok) throw new Error(data.error || 'Erreur proxy');
 
-  for (const url of endpointsToTry) {
-    try {
-      const resp = await fetch(url, {
-        headers: { 'Authorization': authHeader, 'Accept': 'application/json' }
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (Array.isArray(data)) {
-          allSales = data;
-          endpointOk = url;
-          break;
-        }
-      }
-    } catch(e) {}
-  }
+    ventesMoisCache[cacheKey] = {
+      CB: data.totaux.CB || 0,
+      Cheques: data.totaux.Cheques || 0,
+      Especes: data.totaux.Especes || 0
+    };
+    await sauvegarderVentes();
 
-  // Si /sales/ brut : filtrer par date côté JS
-  if (endpointOk.includes('/api/sales/') && !endpointOk.includes('search') && !endpointOk.includes('completed')) {
-    allSales = allSales.filter(s => {
-      const d = s.sale_date || s.date_time || '';
-      return d >= dateDebut && d <= dateFin + 'T23:59:59';
-    });
-    // Paginer si nécessaire
-    let page = 2;
-    while (true) {
-      try {
-        const resp = await fetch(`https://${account}.hiboutik.com/api/sales/?p=${page}`, {
-          headers: { 'Authorization': authHeader, 'Accept': 'application/json' }
-        });
-        if (!resp.ok) break;
-        const data = await resp.json();
-        if (!Array.isArray(data) || data.length === 0) break;
-        // Si on dépasse la période, arrêter
-        const filtered = data.filter(s => {
-          const d = s.sale_date || s.date_time || '';
-          return d >= dateDebut;
-        });
-        allSales = allSales.concat(filtered);
-        if (filtered.length < data.length) break; // on a dépassé le début du mois
-        if (data.length < 100) break;
-        page++;
-        if (page > 20) break; // sécurité
-      } catch(e) { break; }
-    }
-  }
-
-  // Agréger les paiements depuis les ventes directement
-  // La structure d'une vente contient sale_total et payment_type
-  const totaux = { CB: 0, Cheques: 0, Especes: 0, Autres: 0 };
-  const lignes = [];
-
-  // Essayer de récupérer les paiements détaillés par vente
-  // OU utiliser les champs de paiement dans la vente elle-même
-  for (const sale of allSales.slice(0, 500)) {
-    // Certaines versions de l'API retournent le paiement directement dans la vente
-    if (sale.payment_type_id || sale.payment_type) {
-      const typeName = (typeMap[sale.payment_type_id] || sale.payment_type || '').toLowerCase();
-      let mode = categoriserPaiement(typeName);
-      const montant = parseFloat(sale.sale_total || sale.total || 0);
-      totaux[mode] += montant;
-      lignes.push({ date: sale.sale_date || sale.date_time || '', vente: sale.sale_id, type: typeMap[sale.payment_type_id] || sale.payment_type || '?', montant });
-    } else {
-      // Récupérer les paiements séparément
-      try {
-        const pResp = await fetch(`https://${account}.hiboutik.com/api/sales_payments/${sale.sale_id}/`, {
-          headers: { 'Authorization': authHeader, 'Accept': 'application/json' }
-        });
-        if (pResp.ok) {
-          const pData = await pResp.json();
-          if (Array.isArray(pData)) {
-            pData.forEach(p => {
-              const typeName = (typeMap[p.payment_type_id] || '').toLowerCase();
-              let mode = categoriserPaiement(typeName);
-              const montant = parseFloat(p.payment_amount) || 0;
-              totaux[mode] += montant;
-              lignes.push({ date: sale.sale_date || '', vente: sale.sale_id, type: typeMap[p.payment_type_id] || '?', montant });
-            });
-          }
-        }
-      } catch(e) {}
-    }
-  }
-
-  if (allSales.length === 0 && endpointOk === '') {
     document.getElementById('ventes-loading').style.display = 'none';
-    document.getElementById('ventes-table-wrap').innerHTML = `
-      <div class="empty-state">
-        <strong>Impossible de charger depuis Hiboutik</strong>
-        Les endpoints testés retournent 405. Utilisez la saisie manuelle.
-      </div>`;
+    renderVentesCards(ventesMoisCache[cacheKey]);
+
+    // Afficher le détail des lignes
+    renderVentesTable(data.lignes || [], {});
+    renderControle();
+    renderSynthese();
+
+    if (data.nb_erreurs > 0) {
+      document.getElementById('ventes-table-wrap').insertAdjacentHTML('beforeend',
+        `<p style="font-size:0.78rem;color:var(--brun);margin-top:6px;">⚠ ${data.nb_erreurs} vente(s) sans paiement détaillé</p>`);
+    }
+
+  } catch(e) {
+    document.getElementById('ventes-loading').style.display = 'none';
+    document.getElementById('ventes-table-wrap').innerHTML =
+      `<div class="empty-state"><strong>Erreur de chargement</strong>${e.message}</div>`;
     showSaisieManuelle();
-    return;
   }
-
-  ventesMoisCache[cacheKey] = {
-    CB: Math.round(totaux.CB * 100) / 100,
-    Cheques: Math.round(totaux.Cheques * 100) / 100,
-    Especes: Math.round(totaux.Especes * 100) / 100
-  };
-  await sauvegarderVentes();
-
-  document.getElementById('ventes-loading').style.display = 'none';
-  renderVentesCards(ventesMoisCache[cacheKey]);
-  renderVentesTable(lignes, typeMap);
-  renderControle();
-  renderSynthese();
 }
 
 function categoriserPaiement(typeName) {
   typeName = (typeName || '').toLowerCase();
-  if (typeName.includes('cb') || typeName.includes('carte') || typeName.includes('sumup') || typeName.includes('card') || typeName.includes('tpe') || typeName.includes('visa') || typeName.includes('master')) return 'CB';
-  if (typeName.includes('chèque') || typeName.includes('cheque')) return 'Cheques';
-  if (typeName.includes('espèce') || typeName.includes('espece') || typeName.includes('cash') || typeName.includes('liquide') || typeName.includes('liquid')) return 'Especes';
+  if (['cb','carte','sumup','card','tpe','visa','master'].some(m => typeName.includes(m))) return 'CB';
+  if (['chèque','cheque'].some(m => typeName.includes(m))) return 'Cheques';
+  if (['espèce','espece','cash','liquide'].some(m => typeName.includes(m))) return 'Especes';
   return 'Autres';
-}
-
-// ============================================================
-// SAISIE MANUELLE (fallback si pas de connexion API)
-// ============================================================
-function showSaisieManuelle() {
-  const moisIdx = moisActifVentes;
-  const cacheKey = anneeActive + '-' + String(moisIdx + 1).padStart(2, '0');
-  const v = ventesMoisCache[cacheKey] || { CB: 0, Cheques: 0, Especes: 0 };
-  const deja = !!(v.CB || v.Cheques || v.Especes);
-
-  const wrap = document.getElementById('ventes-table-wrap');
-  wrap.innerHTML = `
-    <div class="form-remise" style="border-left:4px solid var(--terracotta);">
-      <h3 style="color:var(--anthracite);">Saisie des ventes - ${MOIS[moisIdx]} ${anneeActive}</h3>
-      <p style="font-size:0.82rem;color:#888;margin-bottom:16px;">
-        Depuis Hiboutik : <strong>Ventes &gt; Rapport des ventes</strong>, sélectionnez le mois et notez les totaux par mode de paiement.
-      </p>
-      <div class="form-row" style="align-items:flex-end;gap:20px;">
-        <div class="form-group">
-          <label style="color:var(--bleu-gris);">💳 CB / TPE (€)</label>
-          <input type="number" id="man-cb" step="0.01" value="${v.CB || ''}" placeholder="0,00" style="width:150px;border-color:var(--bleu-gris);">
-        </div>
-        <div class="form-group">
-          <label style="color:var(--vert-foret);">📝 Chèques (€)</label>
-          <input type="number" id="man-cheque" step="0.01" value="${v.Cheques || ''}" placeholder="0,00" style="width:150px;border-color:var(--vert-foret);">
-        </div>
-        <div class="form-group">
-          <label style="color:var(--terracotta);">💵 Espèces (€)</label>
-          <input type="number" id="man-especes" step="0.01" value="${v.Especes || ''}" placeholder="0,00" style="width:150px;border-color:var(--terracotta);">
-        </div>
-        <button class="btn-add" onclick="sauvegarderManuel()" style="background:var(--terracotta);height:36px;padding:0 24px;">
-          ${deja ? '↻ Mettre à jour' : '✓ Enregistrer'}
-        </button>
-      </div>
-      ${deja ? '<p style="font-size:0.78rem;color:var(--vert-foret);margin-top:10px;">✓ Données enregistrées pour ce mois</p>' : ''}
-    </div>
-  `;
-
-  if (deja) renderVentesCards(v);
-}
-
-async function sauvegarderManuel() {
-  const moisIdx = moisActifVentes;
-  const cacheKey = anneeActive + '-' + String(moisIdx + 1).padStart(2, '0');
-  ventesMoisCache[cacheKey] = {
-    CB: parseFloat(document.getElementById('man-cb').value) || 0,
-    Cheques: parseFloat(document.getElementById('man-cheque').value) || 0,
-    Especes: parseFloat(document.getElementById('man-especes').value) || 0
-  };
-  await sauvegarderVentes();
-  renderVentesCards(ventesMoisCache[cacheKey]);
-  renderControle();
-  renderSynthese();
-}
-
-// ============================================================
-// AFFICHAGE VENTES
-// ============================================================
-function renderVentesCards(v) {
-  const total = (v.CB || 0) + (v.Cheques || 0) + (v.Especes || 0);
-  document.getElementById('ventes-cards').innerHTML = `
-    <div class="card cb">
-      <div class="card-label">CB / TPE</div>
-      <div class="card-value">${fmt(v.CB || 0)}</div>
-      <div class="card-sub">${total > 0 ? Math.round((v.CB||0)/total*100) : 0} % du total</div>
-    </div>
-    <div class="card cheque">
-      <div class="card-label">Chèques</div>
-      <div class="card-value">${fmt(v.Cheques || 0)}</div>
-      <div class="card-sub">${total > 0 ? Math.round((v.Cheques||0)/total*100) : 0} % du total</div>
-    </div>
-    <div class="card especes">
-      <div class="card-label">Espèces</div>
-      <div class="card-value">${fmt(v.Especes || 0)}</div>
-      <div class="card-sub">${total > 0 ? Math.round((v.Especes||0)/total*100) : 0} % du total</div>
-    </div>
-    <div class="card total">
-      <div class="card-label">Total mois</div>
-      <div class="card-value">${fmt(total)}</div>
-      <div class="card-sub">3 modes de paiement</div>
-    </div>
-  `;
-}
-
-function renderVentesTable(lignes, typeMap) {
-  if (!lignes || lignes.length === 0) {
-    document.getElementById('ventes-table-wrap').innerHTML = '<div class="empty-state"><strong>Aucune transaction</strong>Aucune vente enregistrée ce mois</div>';
-    return;
-  }
-  const rows = lignes.slice(0, 200).map(l => `
-    <tr>
-      <td>${l.date}</td>
-      <td>#${l.vente}</td>
-      <td>${l.type}</td>
-      <td class="num">${fmt(l.montant)}</td>
-    </tr>
-  `).join('');
-  document.getElementById('ventes-table-wrap').innerHTML = `
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Date</th><th>N° Vente</th><th>Mode</th><th style="text-align:right">Montant (€)</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-    <p style="font-size:0.75rem;color:#aaa;margin-top:6px;">Affichage limité à 200 lignes - Total : ${lignes.length} transaction(s)</p>
-  `;
 }
 
 // ============================================================
