@@ -317,7 +317,7 @@ function renderImportZone() {
     area.innerHTML =
       '<div class="form-remise" style="border-left:4px solid var(--terracotta);">' +
       '<h3 style="color:var(--anthracite);">Saisie manuelle - ' + MOIS[moisIdx] + ' ' + anneeActive + '</h3>' +
-      '<p style="font-size:0.82rem;color:#888;margin-bottom:16px;">Saisissez les totaux depuis Hiboutik > Ventes > Synthèse des paiements.</p>' +
+      '<p style="font-size:0.82rem;color:#888;margin-bottom:16px;">Saisissez les totaux cumulés de toutes les boutiques.</p>' +
       '<div class="form-row" style="gap:20px;">' +
       '<div class="form-group"><label style="color:var(--bleu-gris);">CB / TPE (€)</label>' +
       '<input type="number" id="man-cb" step="0.01" value="' + (v ? v.CB : '') + '" placeholder="0,00" style="width:150px;"></div>' +
@@ -330,37 +330,57 @@ function renderImportZone() {
       (v ? '<p style="font-size:0.78rem;color:var(--vert-foret);margin-top:10px;">✓ Données enregistrées</p>' : '') +
       '</div>';
   } else {
-    // Mode import CSV
-    area.innerHTML =
-      '<div class="import-zone" id="drop-zone">' +
-      '<input type="file" accept=".csv,.txt" onchange="lireCSV(this.files[0])">' +
-      '<div class="import-icon">📂</div>' +
-      '<div class="import-titre">Glissez le CSV Hiboutik ici</div>' +
-      '<div class="import-sous">ou cliquez pour sélectionner le fichier<br>' +
-      '<strong>Hiboutik > Synthèses > Synthèse comptable > Export paiements</strong></div>' +
-      '</div>';
+    // Mode import CSV multi-boutiques
+    const boutiques = v ? (v.boutiques || []) : [];
+    const BOUTIQUES = ['Tulle', 'Gimel', 'Corrèze'];
 
-    // Afficher résultat si données déjà chargées
-    if (v && (v.CB || v.Cheques || v.Especes)) {
-      area.insertAdjacentHTML('afterbegin',
-        '<div class="import-success">' +
+    // Résumé boutiques déjà importées
+    let resumeBoutiques = '';
+    if (boutiques.length > 0) {
+      resumeBoutiques = '<div class="import-success" style="margin-bottom:12px;">' +
         '<span class="check">✓</span>' +
-        '<div><strong>' + MOIS[moisIdx] + ' ' + anneeActive + ' - Données importées</strong><br>' +
-        '<span style="font-size:0.82rem;color:#555;">CB : ' + fmt(v.CB) + ' | Chèques : ' + fmt(v.Cheques) + ' | Espèces : ' + fmt(v.Especes) + '</span></div>' +
-        '<button onclick="effacerMois()" style="margin-left:auto;background:none;border:1px solid #c00;color:#c00;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.78rem;">✕ Effacer</button>' +
-        '</div>'
-      );
+        '<div style="flex:1;">' +
+        '<strong>' + MOIS[moisIdx] + ' ' + anneeActive + ' - ' + boutiques.length + ' boutique(s) importée(s)</strong><br>' +
+        '<span style="font-size:0.82rem;color:#555;">CB : ' + fmt(v.CB) + ' | Chèques : ' + fmt(v.Cheques) + ' | Espèces : ' + fmt(v.Especes) + '</span><br>' +
+        '<div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">' +
+        boutiques.map(b =>
+          '<span style="background:var(--bleu-pale);padding:2px 8px;border-radius:10px;font-size:0.75rem;">' +
+          b.nom + ' : CB ' + fmt(b.CB) + ' | Chq ' + fmt(b.Cheques) + ' | Esp ' + fmt(b.Especes) +
+          ' <button onclick="supprimerBoutique('' + b.nom + '')" style="background:none;border:none;color:#c00;cursor:pointer;font-size:0.75rem;margin-left:4px;">✕</button></span>'
+        ).join('') +
+        '</div></div>' +
+        '<button onclick="effacerMois()" style="margin-left:8px;background:none;border:1px solid #c00;color:#c00;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.78rem;white-space:nowrap;">✕ Tout effacer</button>' +
+        '</div>';
     }
 
-    // Drag & drop
+    // Zones d'import par boutique
+    const zonesImport = BOUTIQUES.map(nom => {
+      const deja = boutiques.find(b => b.nom === nom);
+      return '<div style="flex:1;min-width:200px;">' +
+        '<div style="font-size:0.78rem;font-weight:bold;color:var(--anthracite);margin-bottom:6px;">' +
+        (deja ? '✓ ' : '') + nom + (deja ? ' <span style="color:var(--vert-foret);font-weight:normal;">(importé)</span>' : '') + '</div>' +
+        '<div class="import-zone" id="dz-' + nom + '" style="padding:16px;' + (deja ? 'border-color:var(--vert-foret);background:var(--vert-pale);' : '') + '">' +
+        '<input type="file" accept=".csv,.txt" onchange="lireCSVBoutique(this.files[0], '' + nom + '')">' +
+        '<div style="font-size:1.2rem;">' + (deja ? '✓' : '📂') + '</div>' +
+        '<div style="font-size:0.78rem;color:#888;margin-top:4px;">' + (deja ? 'Remplacer' : 'Glisser CSV') + '</div>' +
+        '</div></div>';
+    }).join('');
+
+    area.innerHTML = resumeBoutiques +
+      '<div style="display:flex;gap:12px;flex-wrap:wrap;">' + zonesImport + '</div>' +
+      '<p style="font-size:0.75rem;color:#aaa;margin-top:8px;">Hiboutik > Comptabilité > Z mensuel > Export CSV - une boutique à la fois</p>';
+
+    // Drag & drop sur chaque zone
     setTimeout(() => {
-      const dz = document.getElementById('drop-zone');
-      if (!dz) return;
-      dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
-      dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
-      dz.addEventListener('drop', e => {
-        e.preventDefault(); dz.classList.remove('dragover');
-        if (e.dataTransfer.files[0]) lireCSV(e.dataTransfer.files[0]);
+      BOUTIQUES.forEach(nom => {
+        const dz = document.getElementById('dz-' + nom);
+        if (!dz) return;
+        dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+        dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+        dz.addEventListener('drop', e => {
+          e.preventDefault(); dz.classList.remove('dragover');
+          if (e.dataTransfer.files[0]) lireCSVBoutique(e.dataTransfer.files[0], nom);
+        });
       });
     }, 100);
   }
@@ -374,21 +394,34 @@ function renderImportZone() {
   }
 }
 
-// ---- LECTURE CSV HIBOUTIK ----
-function lireCSV(file) {
+// ---- LECTURE CSV HIBOUTIK - PAR BOUTIQUE ----
+function lireCSVBoutique(file, nomBoutique) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
     const text = e.target.result;
     const result = parserCSVHiboutik(text);
     if (result.erreur) {
-      document.getElementById('ventes-import-area').insertAdjacentHTML('afterbegin',
-        '<div class="import-err">⚠ ' + result.erreur + '</div>');
+      alert('Erreur ' + nomBoutique + ' : ' + result.erreur);
       return;
     }
     const moisIdx = moisActifVentes;
     const cacheKey = anneeActive + '-' + String(moisIdx + 1).padStart(2, '0');
-    ventesMoisCache[cacheKey] = result;
+    const actuel = ventesMoisCache[cacheKey] || { CB:0, Cheques:0, Especes:0, Autres:0, boutiques:[] };
+    
+    // Supprimer si boutique déjà présente (remplacement)
+    actuel.boutiques = (actuel.boutiques || []).filter(b => b.nom !== nomBoutique);
+    
+    // Ajouter la boutique
+    actuel.boutiques.push({ nom: nomBoutique, CB: result.CB, Cheques: result.Cheques, Especes: result.Especes, Autres: result.Autres||0 });
+    
+    // Recalculer les totaux
+    actuel.CB      = actuel.boutiques.reduce((s,b) => s+b.CB, 0);
+    actuel.Cheques = actuel.boutiques.reduce((s,b) => s+b.Cheques, 0);
+    actuel.Especes = actuel.boutiques.reduce((s,b) => s+b.Especes, 0);
+    actuel.Autres  = actuel.boutiques.reduce((s,b) => s+(b.Autres||0), 0);
+    
+    ventesMoisCache[cacheKey] = actuel;
     sauvegarderVentes().then(() => {
       renderImportZone();
       renderControle();
@@ -397,6 +430,29 @@ function lireCSV(file) {
   };
   reader.readAsText(file, 'UTF-8');
 }
+
+async function supprimerBoutique(nomBoutique) {
+  const moisIdx = moisActifVentes;
+  const cacheKey = anneeActive + '-' + String(moisIdx + 1).padStart(2, '0');
+  const actuel = ventesMoisCache[cacheKey];
+  if (!actuel) return;
+  actuel.boutiques = (actuel.boutiques || []).filter(b => b.nom !== nomBoutique);
+  if (actuel.boutiques.length === 0) {
+    delete ventesMoisCache[cacheKey];
+  } else {
+    actuel.CB      = actuel.boutiques.reduce((s,b) => s+b.CB, 0);
+    actuel.Cheques = actuel.boutiques.reduce((s,b) => s+b.Cheques, 0);
+    actuel.Especes = actuel.boutiques.reduce((s,b) => s+b.Especes, 0);
+    actuel.Autres  = actuel.boutiques.reduce((s,b) => s+(b.Autres||0), 0);
+  }
+  await sauvegarderVentes();
+  renderImportZone();
+  renderControle();
+  renderSynthese();
+}
+
+// Ancienne fonction gardée pour compatibilité
+function lireCSV(file) { lireCSVBoutique(file, 'Tulle'); }
 
 function parserCSVHiboutik(text) {
   // Format attendu :
@@ -643,11 +699,6 @@ function dl(content, filename) {
 // ---- UTILS ----
 function fmt(n) { return (Math.round(n*100)/100).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
 function fmtDate(d) { if(!d)return''; const p=d.split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:d; }
-</script>
-</body>
-</html>
-
-}
 </script>
 </body>
 </html>
