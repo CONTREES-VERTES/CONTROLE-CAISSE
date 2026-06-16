@@ -718,85 +718,155 @@ async function chargerVentesMois() {
   const account = document.getElementById('hib-account').value.trim();
   const user = document.getElementById('hib-user').value.trim();
   const apikey = document.getElementById('hib-apikey').value.trim();
-  const auth = 'Basic ' + btoa(user + ':' + apikey);
+  let authHeader;
+  try { authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(user + ':' + apikey))); }
+  catch(e) { authHeader = 'Basic ' + btoa(user + ':' + apikey); }
 
   const annee = anneeActive;
   const moisNum = String(moisIdx + 1).padStart(2, '0');
-  const dernierJour = new Date(annee, moisIdx + 1, 0).getDate();
   const dateDebut = `${annee}-${moisNum}-01`;
+  const dernierJour = new Date(annee, moisIdx + 1, 0).getDate();
   const dateFin = `${annee}-${moisNum}-${String(dernierJour).padStart(2,'0')}`;
 
+  // Récupérer d'abord les types de paiement
+  let typeMap = {};
+  let paymentTypes = [];
   try {
-    // Récupérer les ventes du mois
-    let page = 1;
-    let allSales = [];
-    while (true) {
-      const url = `https://${account}.hiboutik.com/api/sales/?date_min=${dateDebut}&date_max=${dateFin}&p=${page}`;
-      const resp = await fetch(url, { headers: { 'Authorization': auth, 'Accept': 'application/json' } });
-      if (!resp.ok) throw new Error('API error ' + resp.status);
-      const data = await resp.json();
-      if (!Array.isArray(data) || data.length === 0) break;
-      allSales = allSales.concat(data);
-      if (data.length < 100) break;
-      page++;
+    const ptResp = await fetch(`https://${account}.hiboutik.com/api/payment_types/`, {
+      headers: { 'Authorization': authHeader, 'Accept': 'application/json' }
+    });
+    if (ptResp.ok) {
+      paymentTypes = await ptResp.json();
+      paymentTypes.forEach(pt => { typeMap[pt.payment_type_id] = pt.payment_type_name; });
     }
+  } catch(e) {}
 
-    // Récupérer les paiements
-    let allPayments = [];
-    for (const sale of allSales) {
+  // Essayer plusieurs formats d'endpoint pour les ventes par date
+  // L'API Hiboutik ne supporte pas ?date_min=... sur /sales/
+  // Le bon endpoint est /completed_sales/{annee}/{mois}/
+  const endpointsToTry = [
+    `https://${account}.hiboutik.com/api/completed_sales/${annee}/${moisNum}/`,
+    `https://${account}.hiboutik.com/api/sales/search/date/${dateDebut}/${dateFin}/`,
+    `https://${account}.hiboutik.com/api/sales/`
+  ];
+
+  let allSales = [];
+  let endpointOk = '';
+
+  for (const url of endpointsToTry) {
+    try {
+      const resp = await fetch(url, {
+        headers: { 'Authorization': authHeader, 'Accept': 'application/json' }
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (Array.isArray(data)) {
+          allSales = data;
+          endpointOk = url;
+          break;
+        }
+      }
+    } catch(e) {}
+  }
+
+  // Si /sales/ brut : filtrer par date côté JS
+  if (endpointOk.includes('/api/sales/') && !endpointOk.includes('search') && !endpointOk.includes('completed')) {
+    allSales = allSales.filter(s => {
+      const d = s.sale_date || s.date_time || '';
+      return d >= dateDebut && d <= dateFin + 'T23:59:59';
+    });
+    // Paginer si nécessaire
+    let page = 2;
+    while (true) {
       try {
-        const pUrl = `https://${account}.hiboutik.com/api/sales_payments/${sale.sale_id}/`;
-        const pResp = await fetch(pUrl, { headers: { 'Authorization': auth, 'Accept': 'application/json' } });
+        const resp = await fetch(`https://${account}.hiboutik.com/api/sales/?p=${page}`, {
+          headers: { 'Authorization': authHeader, 'Accept': 'application/json' }
+        });
+        if (!resp.ok) break;
+        const data = await resp.json();
+        if (!Array.isArray(data) || data.length === 0) break;
+        // Si on dépasse la période, arrêter
+        const filtered = data.filter(s => {
+          const d = s.sale_date || s.date_time || '';
+          return d >= dateDebut;
+        });
+        allSales = allSales.concat(filtered);
+        if (filtered.length < data.length) break; // on a dépassé le début du mois
+        if (data.length < 100) break;
+        page++;
+        if (page > 20) break; // sécurité
+      } catch(e) { break; }
+    }
+  }
+
+  // Agréger les paiements depuis les ventes directement
+  // La structure d'une vente contient sale_total et payment_type
+  const totaux = { CB: 0, Cheques: 0, Especes: 0, Autres: 0 };
+  const lignes = [];
+
+  // Essayer de récupérer les paiements détaillés par vente
+  // OU utiliser les champs de paiement dans la vente elle-même
+  for (const sale of allSales.slice(0, 500)) {
+    // Certaines versions de l'API retournent le paiement directement dans la vente
+    if (sale.payment_type_id || sale.payment_type) {
+      const typeName = (typeMap[sale.payment_type_id] || sale.payment_type || '').toLowerCase();
+      let mode = categoriserPaiement(typeName);
+      const montant = parseFloat(sale.sale_total || sale.total || 0);
+      totaux[mode] += montant;
+      lignes.push({ date: sale.sale_date || sale.date_time || '', vente: sale.sale_id, type: typeMap[sale.payment_type_id] || sale.payment_type || '?', montant });
+    } else {
+      // Récupérer les paiements séparément
+      try {
+        const pResp = await fetch(`https://${account}.hiboutik.com/api/sales_payments/${sale.sale_id}/`, {
+          headers: { 'Authorization': authHeader, 'Accept': 'application/json' }
+        });
         if (pResp.ok) {
           const pData = await pResp.json();
-          if (Array.isArray(pData)) allPayments = allPayments.concat(pData);
+          if (Array.isArray(pData)) {
+            pData.forEach(p => {
+              const typeName = (typeMap[p.payment_type_id] || '').toLowerCase();
+              let mode = categoriserPaiement(typeName);
+              const montant = parseFloat(p.payment_amount) || 0;
+              totaux[mode] += montant;
+              lignes.push({ date: sale.sale_date || '', vente: sale.sale_id, type: typeMap[p.payment_type_id] || '?', montant });
+            });
+          }
         }
       } catch(e) {}
     }
-
-    // Récupérer les types de paiement
-    const ptResp = await fetch(`https://${account}.hiboutik.com/api/payment_types/`, { headers: { 'Authorization': auth, 'Accept': 'application/json' } });
-    const paymentTypes = ptResp.ok ? await ptResp.json() : [];
-
-    // Mapper les types
-    const typeMap = {};
-    paymentTypes.forEach(pt => { typeMap[pt.payment_type_id] = pt.payment_type_name; });
-
-    // Agréger par mode
-    const totaux = { CB: 0, Cheques: 0, Especes: 0, Autres: 0 };
-    const lignes = [];
-
-    allPayments.forEach(p => {
-      const typeName = (typeMap[p.payment_type_id] || '').toLowerCase();
-      let mode = 'Autres';
-      if (typeName.includes('cb') || typeName.includes('carte') || typeName.includes('sumup') || typeName.includes('card') || typeName.includes('tpe')) mode = 'CB';
-      else if (typeName.includes('chèque') || typeName.includes('cheque')) mode = 'Cheques';
-      else if (typeName.includes('espèce') || typeName.includes('espece') || typeName.includes('cash') || typeName.includes('liquide')) mode = 'Especes';
-
-      const montant = parseFloat(p.payment_amount) || 0;
-      totaux[mode] += montant;
-      lignes.push({ date: p.sale_date || '', vente: p.sale_id, type: typeMap[p.payment_type_id] || '?', montant });
-    });
-
-    // Sauvegarder dans le cache
-    ventesMoisCache[cacheKey] = {
-      CB: Math.round(totaux.CB * 100) / 100,
-      Cheques: Math.round(totaux.Cheques * 100) / 100,
-      Especes: Math.round(totaux.Especes * 100) / 100
-    };
-
-    // Sauvegarder dans le stockage persistant
-    await sauvegarderVentes();
-
-    document.getElementById('ventes-loading').style.display = 'none';
-    renderVentesCards(ventesMoisCache[cacheKey]);
-    renderVentesTable(lignes, typeMap);
-
-  } catch(e) {
-    document.getElementById('ventes-loading').style.display = 'none';
-    document.getElementById('ventes-table-wrap').innerHTML = `<div class="empty-state"><strong>Erreur de chargement</strong>${e.message}</div>`;
-    showSaisieManuelle();
   }
+
+  if (allSales.length === 0 && endpointOk === '') {
+    document.getElementById('ventes-loading').style.display = 'none';
+    document.getElementById('ventes-table-wrap').innerHTML = `
+      <div class="empty-state">
+        <strong>Impossible de charger depuis Hiboutik</strong>
+        Les endpoints testés retournent 405. Utilisez la saisie manuelle.
+      </div>`;
+    showSaisieManuelle();
+    return;
+  }
+
+  ventesMoisCache[cacheKey] = {
+    CB: Math.round(totaux.CB * 100) / 100,
+    Cheques: Math.round(totaux.Cheques * 100) / 100,
+    Especes: Math.round(totaux.Especes * 100) / 100
+  };
+  await sauvegarderVentes();
+
+  document.getElementById('ventes-loading').style.display = 'none';
+  renderVentesCards(ventesMoisCache[cacheKey]);
+  renderVentesTable(lignes, typeMap);
+  renderControle();
+  renderSynthese();
+}
+
+function categoriserPaiement(typeName) {
+  typeName = (typeName || '').toLowerCase();
+  if (typeName.includes('cb') || typeName.includes('carte') || typeName.includes('sumup') || typeName.includes('card') || typeName.includes('tpe') || typeName.includes('visa') || typeName.includes('master')) return 'CB';
+  if (typeName.includes('chèque') || typeName.includes('cheque')) return 'Cheques';
+  if (typeName.includes('espèce') || typeName.includes('espece') || typeName.includes('cash') || typeName.includes('liquide') || typeName.includes('liquid')) return 'Especes';
+  return 'Autres';
 }
 
 // ============================================================
