@@ -684,6 +684,8 @@ async function connecterHiboutik() {
     hibConnecte = true;
     afficherStatus('Connecté à Hiboutik ✓', 'ok');
     try { await window.storage.set('hiboutik_creds', JSON.stringify({ user, apikey })); } catch(e) {}
+    // Découvrir les endpoints disponibles
+    await detecterEndpoints(account, authHeader);
     chargerVentesMois();
   } else {
     afficherStatus('Connexion échouée - mode saisie manuelle actif', 'err');
@@ -696,6 +698,47 @@ function afficherStatus(msg, type) {
   el.textContent = msg;
   el.className = 'status-' + type;
   el.style.display = 'inline-block';
+}
+
+// ============================================================
+// DIAGNOSTIC ENDPOINTS
+// ============================================================
+async function detecterEndpoints(account, authHeader) {
+  const candidats = [
+    `/api/sales/store/0/date/2026-06/`,
+    `/api/sales/store/1/date/2026-06/`,
+    `/api/completed_sales/2026/06/`,
+    `/api/sales/`,
+    `/api/sales/?p=1`,
+    `/api/closed_sales/`,
+    `/api/sales_payments/`
+  ];
+  const resultats = [];
+  for (const ep of candidats) {
+    try {
+      const r = await fetch(`https://${account}.hiboutik.com${ep}`, {
+        headers: { 'Authorization': authHeader, 'Accept': 'application/json' }
+      });
+      resultats.push({ ep, status: r.status, ok: r.ok });
+    } catch(e) {
+      resultats.push({ ep, status: 'CORS/ERR', ok: false });
+    }
+  }
+  // Trouver le premier qui marche
+  const ok = resultats.filter(r => r.ok);
+  console.log('Hiboutik endpoints testés:', resultats);
+  if (ok.length > 0) {
+    window._hibEndpointOk = ok[0].ep;
+    console.log('Endpoint OK:', window._hibEndpointOk);
+  }
+  // Afficher le résultat dans un panneau discret
+  const panel = document.createElement('div');
+  panel.id = 'diag-panel';
+  panel.style.cssText = 'position:fixed;bottom:10px;right:10px;background:#222;color:#0f0;font-size:11px;padding:10px;border-radius:6px;max-width:400px;z-index:9999;font-family:monospace;max-height:200px;overflow:auto;';
+  panel.innerHTML = '<strong style="color:#D88050">Diagnostic Hiboutik</strong><br>' +
+    resultats.map(r => `${r.ok ? '✓' : '✗'} ${r.ep} → <span style="color:${r.ok?'#0f0':'#f66'}">${r.status}</span>`).join('<br>') +
+    '<br><small style="color:#888;cursor:pointer" onclick="this.parentNode.remove()">✕ fermer</small>';
+  document.body.appendChild(panel);
 }
 
 // ============================================================
@@ -741,13 +784,17 @@ async function chargerVentesMois() {
     }
   } catch(e) {}
 
-  // Essayer plusieurs formats d'endpoint pour les ventes par date
-  // L'API Hiboutik ne supporte pas ?date_min=... sur /sales/
-  // Le bon endpoint est /completed_sales/{annee}/{mois}/
+  // Endpoints Hiboutik pour les ventes clôturées par date
+  // Source : hiboutik-api-client README - "LIST Closed sales by Store ID and Date"
+  // Format : GET /sales/store/{store_id}/date/{date}/ (ventes d'une journée)
+  // On récupère chaque jour du mois et on agrège
+  // Ou : GET /sales/{sale_id}/ pour une vente précise
+  // Endpoint mois entier : /sales/store/0/date/{annee}-{mois}/  (0 = tous les magasins)
   const endpointsToTry = [
+    `https://${account}.hiboutik.com/api/sales/store/0/date/${annee}-${moisNum}/`,
+    `https://${account}.hiboutik.com/api/sales/store/1/date/${annee}-${moisNum}/`,
     `https://${account}.hiboutik.com/api/completed_sales/${annee}/${moisNum}/`,
-    `https://${account}.hiboutik.com/api/sales/search/date/${dateDebut}/${dateFin}/`,
-    `https://${account}.hiboutik.com/api/sales/`
+    `https://${account}.hiboutik.com/api/sales/search/date/${dateDebut}/${dateFin}/`
   ];
 
   let allSales = [];
