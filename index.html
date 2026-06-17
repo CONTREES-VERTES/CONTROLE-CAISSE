@@ -121,6 +121,13 @@ footer span{color:var(--terracotta);}
   </select>
 </header>
 
+<div id="config-panel" style="background:var(--bleu-pale);border-bottom:2px solid var(--bleu-gris);padding:10px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+  <label style="font-size:0.8rem;font-weight:bold;">https://script.google.com/macros/s/AKfycbwg184pTxlynVeqGac3J0oxfdPUq_xpZKRaI7UiAKpLUKCnCWtB9Ov_tBQ1f9zW__44lg/exec</label>
+  <input type="text" id="api-url" placeholder="https://script.google.com/macros/s/.../exec" style="flex:1;min-width:300px;padding:5px 10px;border:1px solid var(--bleu-gris);border-radius:4px;font-size:0.85rem;">
+  <button onclick="connecterBackend()" style="background:var(--bleu-gris);color:white;border:none;padding:6px 16px;border-radius:4px;font-size:0.85rem;cursor:pointer;font-weight:bold;">Connecter</button>
+  <span id="backend-status" style="font-size:0.8rem;padding:4px 10px;border-radius:4px;display:none;"></span>
+</div>
+
 <nav class="tabs">
   <button class="active" onclick="showTab('ventes',this)">Ventes Hiboutik</button>
   <button onclick="showTab('remises',this)">Remises en banque</button>
@@ -236,12 +243,18 @@ let modeManuel = false;
 // ---- INIT ----
 document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('rem-date').value = new Date().toISOString().split('T')[0];
-  await chargerDonnees();
-  buildMonthSelectors();
-  renderTableRemises();
-  renderControle();
-  renderSynthese();
-  renderImportZone();
+
+  const savedUrl = localStorage.getItem('cc_api_url');
+  if (savedUrl) {
+    document.getElementById('api-url').value = savedUrl;
+    await connecterBackend();
+  } else {
+    buildMonthSelectors();
+    renderTableRemises();
+    renderControle();
+    renderSynthese();
+    renderImportZone();
+  }
 });
 
 // ---- TABS ----
@@ -254,19 +267,19 @@ function showTab(name, btn) {
   if (name === 'synthese') renderSynthese();
 }
 
-function changeAnnee(val) {
+async function changeAnnee(val) {
   anneeActive = parseInt(val);
   ventesMoisCache = {};
+  remises = [];
   ['remises-annee-label','controle-annee-label','synthese-annee-label'].forEach(id => {
     document.getElementById(id).textContent = anneeActive;
   });
-  chargerDonnees().then(() => {
-    buildMonthSelectors();
-    renderTableRemises();
-    renderControle();
-    renderSynthese();
-    renderImportZone();
-  });
+  await chargerDonnees();
+  buildMonthSelectors();
+  renderTableRemises();
+  renderControle();
+  renderSynthese();
+  renderImportZone();
 }
 
 // ---- MOIS ----
@@ -547,15 +560,90 @@ function renderVentesCards(v) {
     (v.Autres ? '<div class="card-sub">+ ' + fmt(v.Autres) + ' autres modes</div>' : '') + '</div>';
 }
 
-// ---- REMISES ----
-async function chargerDonnees() {
-  try { const s = await window.storage.get('remises_' + anneeActive); remises = s ? JSON.parse(s.value) : []; } catch(e) { remises = []; }
-  try { const s = await window.storage.get('ventes_' + anneeActive); if (s) Object.assign(ventesMoisCache, JSON.parse(s.value)); } catch(e) {}
-  try { const s = await window.storage.get('explications_' + anneeActive); if (s) Object.assign(explications, JSON.parse(s.value)); } catch(e) {}
+// ---- BACKEND API ----
+let apiUrl = '';
+let backendOk = false;
+
+async function connecterBackend() {
+  apiUrl = document.getElementById('api-url').value.trim();
+  if (!apiUrl.includes('script.google.com')) {
+    afficherBackendStatus('URL invalide', 'err');
+    return;
+  }
+  afficherBackendStatus('Connexion...', 'loading');
+  try {
+    const resp = await fetch(apiUrl + '?action=ping');
+    const data = await resp.json();
+    if (data.ok) {
+      backendOk = true;
+      afficherBackendStatus('Connecté ✓', 'ok');
+      localStorage.setItem('cc_api_url', apiUrl);
+      await chargerDonnees();
+      buildMonthSelectors();
+      renderTableRemises();
+      renderControle();
+      renderSynthese();
+      renderImportZone();
+    } else {
+      afficherBackendStatus('Erreur: ' + (data.error||'inconnue'), 'err');
+    }
+  } catch(e) {
+    afficherBackendStatus('Connexion échouée: ' + e.message, 'err');
+  }
 }
 
-async function sauvegarderRemises() { try { await window.storage.set('remises_' + anneeActive, JSON.stringify(remises)); } catch(e) {} }
-async function sauvegarderVentes()  { try { await window.storage.set('ventes_' + anneeActive, JSON.stringify(ventesMoisCache)); } catch(e) {} }
+function afficherBackendStatus(msg, type) {
+  const el = document.getElementById('backend-status');
+  el.textContent = msg;
+  el.style.display = 'inline-block';
+  el.style.background = type === 'ok' ? 'var(--vert-pale)' : type === 'err' ? 'var(--rose)' : 'var(--creme)';
+  el.style.color = type === 'ok' ? 'var(--vert-foret)' : type === 'err' ? '#c00' : 'var(--brun)';
+}
+
+// ---- DONNEES (via backend) ----
+async function chargerDonnees() {
+  if (!backendOk || !apiUrl) return;
+  try {
+    const resp = await fetch(apiUrl + '?action=charger&annee=' + anneeActive);
+    const data = await resp.json();
+    if (data.ok) {
+      remises = data.remises || [];
+      Object.assign(ventesMoisCache, data.ventes || {});
+      Object.assign(explications, data.explications || {});
+    }
+  } catch(e) { console.error('Erreur chargement:', e); }
+}
+
+async function sauvegarderVenteMois(annee, mois, vdata) {
+  if (!backendOk) return;
+  try {
+    await fetch(apiUrl, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'sauverVente', annee, mois, data: vdata })
+    });
+  } catch(e) { console.error(e); }
+}
+
+async function supprimerVenteMois(annee, mois) {
+  if (!backendOk) return;
+  try {
+    await fetch(apiUrl, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'supprimerVente', annee, mois })
+    });
+  } catch(e) { console.error(e); }
+}
+
+async function sauvegarderVentes() {
+  const moisIdx = moisActifVentes;
+  const cacheKey = anneeActive + '-' + String(moisIdx + 1).padStart(2, '0');
+  const v = ventesMoisCache[cacheKey];
+  if (v) {
+    await sauvegarderVenteMois(anneeActive, moisIdx + 1, v);
+  } else {
+    await supprimerVenteMois(anneeActive, moisIdx + 1);
+  }
+}
 
 async function ajouterRemise() {
   const date = document.getElementById('rem-date').value;
@@ -564,17 +652,32 @@ async function ajouterRemise() {
   const montant = parseFloat(document.getElementById('rem-montant').value);
   const ref = document.getElementById('rem-ref').value.trim();
   if (!date || isNaN(montant) || montant <= 0) { alert('Date et montant obligatoires'); return; }
-  remises.push({ id: Date.now(), date, mois, mode, montant, ref });
-  await sauvegarderRemises();
+  const nouvelleRemise = { id: Date.now(), date, mois, mode, montant, ref };
+  remises.push(nouvelleRemise);
   renderTableRemises(); renderControle(); renderSynthese();
   document.getElementById('rem-montant').value = '';
   document.getElementById('rem-ref').value = '';
+  if (backendOk) {
+    try {
+      await fetch(apiUrl, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'ajouterRemise', annee: anneeActive, remise: nouvelleRemise })
+      });
+    } catch(e) { console.error(e); }
+  }
 }
 
 async function supprimerRemise(id) {
   remises = remises.filter(r => r.id !== id);
-  await sauvegarderRemises();
   renderTableRemises(); renderControle(); renderSynthese();
+  if (backendOk) {
+    try {
+      await fetch(apiUrl, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'supprimerRemise', annee: anneeActive, id })
+      });
+    } catch(e) { console.error(e); }
+  }
 }
 
 function renderTableRemises() {
@@ -642,7 +745,14 @@ function renderControle() {
 
 async function saveExpl(key, val) {
   explications[key] = val;
-  try { await window.storage.set('explications_' + anneeActive, JSON.stringify(explications)); } catch(e) {}
+  if (backendOk) {
+    try {
+      await fetch(apiUrl, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'sauverExplication', annee: anneeActive, cle: key, valeur: val })
+      });
+    } catch(e) { console.error(e); }
+  }
 }
 
 // ---- SYNTHESE ----
