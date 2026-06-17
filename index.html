@@ -719,9 +719,9 @@ function renderControle() {
   ];
   const mc = m => m==='CB'?'cb':m==='Chèques'?'cheque':'especes';
   const rows = data.map(d => {
-    const e = Math.round((d.ventes-d.remis)*100)/100;
-    const ec = Math.abs(e)<0.01?'ecart-ok':e>0?'ecart-warn':'ecart-err';
-    const badge = Math.abs(e)<0.01?'<span class="badge-ok">OK</span>':e>0?'<span class="badge-warn">A expliquer</span>':'<span class="badge-err">Sur-remise</span>';
+    const e = Math.round((d.remis-d.ventes)*100)/100;
+    const ec = Math.abs(e)<0.01?'ecart-ok':e<0?'ecart-warn':'ecart-err';
+    const badge = Math.abs(e)<0.01?'<span class="badge-ok">OK</span>':e<0?'<span class="badge-warn">A expliquer</span>':'<span class="badge-err">Sur-remise</span>';
     const key = 'expl_'+anneeActive+'_'+moisIdx+'_'+d.mode;
     return '<tr><td class="mode-'+mc(d.mode)+'">'+d.mode+'</td><td class="num">'+fmt(d.ventes)+'</td><td class="num">'+fmt(d.remis)+'</td>'+
       '<td class="num '+ec+'">'+(e>=0?'+':'')+fmt(e)+'</td>'+
@@ -729,8 +729,8 @@ function renderControle() {
       '<td>'+badge+'</td></tr>';
   }).join('');
   const totV=data.reduce((s,d)=>s+d.ventes,0), totR=data.reduce((s,d)=>s+d.remis,0);
-  const totE=Math.round((totV-totR)*100)/100;
-  const totEc=Math.abs(totE)<0.01?'ecart-ok':totE>0?'ecart-warn':'ecart-err';
+  const totE=Math.round((totR-totV)*100)/100;
+  const totEc=Math.abs(totE)<0.01?'ecart-ok':totE<0?'ecart-warn':'ecart-err';
   const detailRows = rm.length===0
     ? '<tr><td colspan="5" class="empty-state">Aucune remise pour ce mois</td></tr>'
     : [...rm].sort((a,b)=>a.date.localeCompare(b.date)).map(r =>
@@ -773,11 +773,11 @@ function renderSynthese() {
     const rCH=rm.filter(r=>r.mode==='Chèques').reduce((s,r)=>s+r.montant,0);
     const rES=rm.filter(r=>r.mode==='Espèces').reduce((s,r)=>s+r.montant,0);
     const tV=(v.CB||0)+(v.Cheques||0)+(v.Especes||0), tR=rCB+rCH+rES;
-    const e=Math.round((tV-tR)*100)/100;
+    const e=Math.round((tR-tV)*100)/100;
     tCBv+=v.CB||0; tCHv+=v.Cheques||0; tESv+=v.Especes||0;
     tCBr+=rCB; tCHr+=rCH; tESr+=rES;
     if(tV===0&&tR===0) return '<tr><td>'+m+'</td><td class="num" colspan="9" style="color:#ccc">-</td></tr>';
-    const ec=Math.abs(e)<0.01?'ecart-ok':e>0?'ecart-warn':'ecart-err';
+    const ec=Math.abs(e)<0.01?'ecart-ok':e<0?'ecart-warn':'ecart-err';
     return '<tr class="'+(Math.abs(e)<0.01?'synth-row-ok':'synth-row-warn')+'">'+
       '<td><strong>'+m+'</strong></td>'+
       '<td class="num">'+fmt(v.CB||0)+'</td><td class="num">'+fmt(rCB)+'</td>'+
@@ -787,8 +787,8 @@ function renderSynthese() {
       '<td class="num '+ec+'"><strong>'+(e>=0?'+':'')+fmt(e)+'</strong></td></tr>';
   }).join('');
   const tV2=tCBv+tCHv+tESv, tR2=tCBr+tCHr+tESr;
-  const et=Math.round((tV2-tR2)*100)/100;
-  const ec3=Math.abs(et)<0.01?'ecart-ok':et>0?'ecart-warn':'ecart-err';
+  const et=Math.round((tR2-tV2)*100)/100;
+  const ec3=Math.abs(et)<0.01?'ecart-ok':et<0?'ecart-warn':'ecart-err';
   document.getElementById('tbody-synthese').innerHTML = rows +
     '<tr style="background:var(--anthracite);color:white;font-weight:bold;">'+
     '<td>TOTAL '+anneeActive+'</td>'+
@@ -817,7 +817,7 @@ function exporterSynthese() {
     const rCH=rm.filter(r=>r.mode==='Chèques').reduce((s,r)=>s+r.montant,0);
     const rES=rm.filter(r=>r.mode==='Espèces').reduce((s,r)=>s+r.montant,0);
     const tV=(v.CB||0)+(v.Cheques||0)+(v.Especes||0), tR=rCB+rCH+rES;
-    lines.push([m,(v.CB||0).toFixed(2),rCB.toFixed(2),(v.Cheques||0).toFixed(2),rCH.toFixed(2),(v.Especes||0).toFixed(2),rES.toFixed(2),tV.toFixed(2),tR.toFixed(2),(tV-tR).toFixed(2)].join(';'));
+    lines.push([m,(v.CB||0).toFixed(2),rCB.toFixed(2),(v.Cheques||0).toFixed(2),rCH.toFixed(2),(v.Especes||0).toFixed(2),rES.toFixed(2),tV.toFixed(2),tR.toFixed(2),(tR-tV).toFixed(2)].join(';'));
   });
   dl(lines.join('\n'), 'synthese_'+anneeActive+'.csv');
 }
