@@ -482,34 +482,41 @@ function handleCSVInput(input) {
 function lireCSV(file) { lireCSVBoutique(file, 'Tulle'); }
 
 function parserCSVHiboutik(text) {
-  // Format attendu :
-  // Type,"Quantité","Montant"
-  // CB EUR,"28","398.72"
-  // CHE EUR,"1","20.25"
-  // ESP EUR,"21","170.80"
-  // VIR EUR,"1","99.00"
-  // Total,"51","688.77"
+  // Format attendu (export Hiboutik Comptabilite > Z mensuel) :
+  // "Type","Quantité","Montant"
+  // "CB EUR","61","1134.86"
+  // "CHE EUR","1","18.00"
+  // "ESP EUR","49","363.70"
+  // "Total","111","1516.56"
 
-  const lignes = text.trim().split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  // Nettoyage robuste : retirer BOM UTF-8, retours chariot \r, espaces invisibles
+  let clean = text.replace(/^\uFEFF/, '');   // BOM
+  clean = clean.replace(/\r/g, '');           // retours chariot Windows
+
+  const lignes = clean.trim().split('\n').map(l => l.trim()).filter(l => l.length > 0);
   if (lignes.length < 2) return { erreur: 'Fichier vide ou format incorrect' };
 
   let CB = 0, Cheques = 0, Especes = 0, Autres = 0;
   let trouve = false;
 
   lignes.forEach(ligne => {
-    // Nettoyer et splitter
-    const cols = ligne.split(',').map(c => c.replace(/"/g, '').trim());
+    // Parser en respectant les guillemets CSV (gère les virgules dans les valeurs)
+    const cols = ligne.split(',').map(c =>
+      c.replace(/^"/, '').replace(/"$/, '').replace(/[^\x20-\x7EÀ-ÿ]/g, '').trim()
+    );
     if (cols.length < 3) return;
-    const type = cols[0].toUpperCase();
-    const montant = parseFloat(cols[2].replace(',', '.')) || 0;
+    const type = cols[0].toUpperCase().trim();
+    // Nettoyer le montant : retirer tout sauf chiffres, point, virgule, signe moins
+    const montantStr = cols[2].replace(/[^0-9.,\-]/g, '').replace(',', '.');
+    const montant = parseFloat(montantStr) || 0;
 
-    if (type.startsWith('CB') || type.includes('CARTE') || type.includes('TPE') || type.includes('VISA') || type.includes('MASTER')) {
+    if (type.startsWith('CB') || type.includes('CARTE') || type.includes('TPE') || type.includes('VISA') || type.includes('MASTER') || type.includes('SUMUP')) {
       CB += montant; trouve = true;
-    } else if (type.startsWith('CHE') || type.includes('CHEQUE') || type.includes('CHÈQUE')) {
+    } else if (type.startsWith('CHE') || type.includes('CHEQUE')) {
       Cheques += montant; trouve = true;
-    } else if (type.startsWith('ESP') || type.includes('ESPECE') || type.includes('ESPÈCE') || type.includes('CASH')) {
+    } else if (type.startsWith('ESP') || type.includes('ESPECE') || type.includes('CASH') || type.includes('LIQUID')) {
       Especes += montant; trouve = true;
-    } else if (type !== 'TYPE' && type !== 'TOTAL' && !type.startsWith('TYPE')) {
+    } else if (type !== 'TYPE' && type !== 'TOTAL' && type !== '') {
       Autres += montant;
     }
   });
